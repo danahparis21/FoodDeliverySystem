@@ -1,0 +1,18 @@
+/* styles.css */
+.root {
+    -fx-background-color: linear-gradient(to bottom, #1e1e1e, #252525);
+    -fx-font-family: "Arial";
+}
+
+/* Styling a button */
+.button {
+    -fx-background-color: #ff4081;
+    -fx-text-fill: white;
+    -fx-font-size: 14px;
+    -fx-background-radius: 8px;
+}
+
+/* Adding hover effect */
+.button:hover {
+    -fx-background-color: #e91e63;
+}

@@ -1,0 +1,8 @@
+.root {
+    -fx-background-color: #ffffff;
+}
+.button {
+    -fx-background-color: #f0f0f0;
+    -fx-text-fill: #333;
+    -fx-font-size: 14px;
+}
