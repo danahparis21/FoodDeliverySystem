@@ -1,4 +1,5 @@
 package andoksfooddeliverysystem;
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -6,6 +7,9 @@ import java.sql.ResultSet;
 import java.sql.Statement;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import javafx.application.Application;
+import javafx.scene.control.Alert;
+import javafx.stage.Stage;
 
 public class User {
     
@@ -101,26 +105,39 @@ public class User {
     }
 
      // Login method that fetches both userID and role
-    public static User login(String name, String password) {
-        String sql = "SELECT user_id, role FROM Users WHERE full_name = ? AND password = ?";
+   public static User login(String name, String password, Stage currentStage) {
+    String sql = "SELECT user_id, role FROM Users WHERE full_name = ? AND password = ?";
 
-        try (Connection conn = Database.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+    try (Connection conn = Database.connect();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, name);
-            stmt.setString(2, hashPassword(password)); // Compare hashed password
+        stmt.setString(1, name);
+        stmt.setString(2, hashPassword(password)); // Ensure password is hashed correctly
 
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                int userID = rs.getInt("user_id");  // Fetch userID
-                String role = rs.getString("role").trim().toLowerCase();
-                return new User(userID, role);
+        ResultSet rs = stmt.executeQuery();
+        if (rs.next()) {
+            int userID = rs.getInt("user_id");  
+            String role = rs.getString("role").trim().toLowerCase();
+
+            User user = new User(userID, role); // ✅ Create User object
+
+            // Open appropriate dashboard
+            if (role.equals("admin")) {
+                new AdminDashboard().start(new Stage());
+            } else if (role.equals("customer")) {
+                new CustomerDashboard().start(new Stage());
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
+
+            currentStage.close(); // ✅ Close login window
+            return user; // ✅ Return user
         }
-        return null; // Login failed
+    }catch (Exception e) {
+        e.printStackTrace();
     }
+
+    return null; // Return null if login fails
+}
+
 
 
 }

@@ -80,24 +80,28 @@ public class Main extends Application {
         Button loginBtn = new Button("Login");
         loginBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px;");
         
-        loginBtn.setOnAction(e -> {
+       loginBtn.setOnAction(e -> {
             String username = usernameField.getText();
             String password = passwordField.getText();
 
-            User loggedInUser = User.login(username, password);
+            // Get the current stage (login window)
+            Stage currentStage = (Stage) loginBtn.getScene().getWindow();
+
+            // Store the returned User object
+            User loggedInUser = User.login(username, password, currentStage);
 
             if (loggedInUser != null) {
                 System.out.println("Login successful! User role: " + loggedInUser.getRole());
                 Alert alert = new Alert(Alert.AlertType.INFORMATION, "Login successful!", ButtonType.OK);
                 alert.showAndWait();
-                // Proceed to the main application window
             } else {
                 System.out.println("Invalid credentials.");
                 Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid username or password!", ButtonType.OK);
                 alert.showAndWait();
             }
         });
-        
+
+
         Button signUpBtn = new Button("Sign Up");
         signUpBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px;");
         signUpBtn.setOnAction(e -> {

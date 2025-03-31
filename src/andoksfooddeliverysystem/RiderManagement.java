@@ -18,7 +18,10 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+
 import java.util.Optional;
+import java.util.Random;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -99,67 +102,55 @@ public class RiderManagement {
 
     // Database Operations
     try (Connection conn = Database.connect()) {
-        conn.setAutoCommit(false); // Start transaction
+    conn.setAutoCommit(false); // Start transaction
 
-        String checkSql = "SELECT rider_id FROM riders WHERE name = ?";
-        try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
-            checkStmt.setString(1, name);
-            try (ResultSet rs = checkStmt.executeQuery()) {
-                if (rs.next()) {
-                    int existingId = rs.getInt("rider_id");
+    // Check if the rider already exists
+    String checkSql = "SELECT rider_id FROM riders WHERE name = ?";
+    try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+        checkStmt.setString(1, name);
+        try (ResultSet rs = checkStmt.executeQuery()) {
+            if (rs.next()) {
+                int existingId = rs.getInt("rider_id");
 
-                    Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-                    alert.setTitle("Rider Exists");
-                    alert.setHeaderText("This rider already exists.");
-                    alert.setContentText("Do you want to update the existing rider or insert a new one?");
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Rider Exists");
+                alert.setHeaderText("This rider already exists.");
+                alert.setContentText("Do you want to update the existing rider or insert a new one?");
 
-                    ButtonType updateButton = new ButtonType("Update");
-                    ButtonType insertNewButton = new ButtonType("Insert New");
-                    ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
-                    alert.getButtonTypes().setAll(updateButton, insertNewButton, cancelButton);
-                    Optional<ButtonType> result = alert.showAndWait();
+                ButtonType updateButton = new ButtonType("Update");
+                ButtonType insertNewButton = new ButtonType("Insert New");
+                ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+                alert.getButtonTypes().setAll(updateButton, insertNewButton, cancelButton);
+                Optional<ButtonType> result = alert.showAndWait();
 
-                    if (result.isPresent()) {
-                        if (result.get() == updateButton) {
-                            String updateSql = "UPDATE riders SET name = ?, contact_number = ?, imagePath = ? WHERE rider_id = ?";
-                            try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
-                                updateStmt.setString(1, name);
-                                updateStmt.setString(2, contact);
-                                updateStmt.setString(3, imagePath);
-                                updateStmt.setInt(4, existingId);
-                                updateStmt.executeUpdate();
-                            }
-                            JOptionPane.showMessageDialog(null, "Rider details updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-  
-                        } else if (result.get() == insertNewButton) {
-                            String insertSql = "INSERT INTO riders (name, contact_number, imagePath) VALUES (?, ?, ?)";
-                            try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
-                                insertStmt.setString(1, name + " (New)");
-                                insertStmt.setString(2, contact);
-                                insertStmt.setString(3, imagePath);
-                                insertStmt.executeUpdate();
-                            }
-                            JOptionPane.showMessageDialog(null, "New rider added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-
+                if (result.isPresent()) {
+                    if (result.get() == updateButton) {
+                        // Update existing rider
+                        String updateSql = "UPDATE riders SET name = ?, contact_number = ?, imagePath = ? WHERE rider_id = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+                            updateStmt.setString(1, name);
+                            updateStmt.setString(2, contact);
+                            updateStmt.setString(3, imagePath);
+                            updateStmt.setInt(4, existingId);
+                            updateStmt.executeUpdate();
                         }
+                        JOptionPane.showMessageDialog(null, "Rider details updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    } else if (result.get() == insertNewButton) {
+                        // Insert a new rider entry
+                        insertNewRider(conn, name + " (New)", contact, imagePath);
                     }
-                } else {
-                    String insertSql = "INSERT INTO riders (name, contact_number, imagePath) VALUES (?, ?, ?)";
-                    try (PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
-                        insertStmt.setString(1, name);
-                        insertStmt.setString(2, contact);
-                        insertStmt.setString(3, imagePath);
-                        insertStmt.executeUpdate();
-                    }
-                    JOptionPane.showMessageDialog(null, "New rider added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
- 
                 }
+            } else {
+                // Insert new Rider and User
+                insertNewRider(conn, name, contact, imagePath);
             }
         }
-        conn.commit(); // Commit transaction
-    } catch (SQLException ex) {
-        ex.printStackTrace();
     }
+} catch (SQLException ex) {
+    ex.printStackTrace();
+    JOptionPane.showMessageDialog(null, "Error processing rider data!", "Error", JOptionPane.ERROR_MESSAGE);
+}
+
 });
    
      // ====== TABLEVIEW  ======
@@ -299,6 +290,52 @@ public class RiderManagement {
     mainPane.getChildren().addAll(formPane, tableView);
     root.getChildren().add(mainPane);
     root.setStyle("-fx-background-color: #f4f4f4;");
+    }
+
+    private void insertNewRider(Connection conn, String name, String contact, String imagePath) throws SQLException {
+        String userSql = "INSERT INTO Users (full_name, email, password, role) VALUES (?, ?, ?, 'Rider')";
+        String riderSql = "INSERT INTO Riders (user_id, name, contact_number, imagePath) VALUES (?, ?, ?, ?)";
+
+        try (PreparedStatement userStmt = conn.prepareStatement(userSql, Statement.RETURN_GENERATED_KEYS);
+             PreparedStatement riderStmt = conn.prepareStatement(riderSql)) {
+
+            // Generate default username & password
+            String defaultUsername = name.replaceAll("\\s+", "").toLowerCase(); // Trim spaces and make lowercase
+            String defaultPassword = "riderpassword"; // Default password
+
+            // Insert into Users table
+            userStmt.setString(1, name);
+            userStmt.setString(2, defaultUsername + "@riders.com"); // Temporary email
+            userStmt.setString(3, defaultPassword); // Store hashed password
+            int userRows = userStmt.executeUpdate();
+
+            // Get generated user_id
+            ResultSet generatedKeys = userStmt.getGeneratedKeys();
+            int userId = -1;
+            if (generatedKeys.next()) {
+                userId = generatedKeys.getInt(1);
+            }
+
+            // Insert into Riders table
+            if (userId != -1) {
+                riderStmt.setInt(1, userId);
+                riderStmt.setString(2, name);
+                riderStmt.setString(3, contact);
+                riderStmt.setString(4, imagePath);
+                int riderRows = riderStmt.executeUpdate();
+
+                if (riderRows > 0) {
+                    JOptionPane.showMessageDialog(null, "New rider added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                }
+            } else {
+                JOptionPane.showMessageDialog(null, "Error retrieving user ID!", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+
+            conn.commit(); // Commit transaction
+        } catch (SQLException e) {
+            conn.rollback(); // Rollback on error
+            throw e;
+        }
     }
 
       public class RidersList {
