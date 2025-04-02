@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Choose Address</title>
+   <script>
+  let map;
+  let geocoder;
+  let infowindow;
+  let marker;
+  let mapInitialized = false;
+  let pendingAddress = null;
+
+  function initMap() {
+    geocoder = new google.maps.Geocoder();
+    infowindow = new google.maps.InfoWindow();
+    
+    map = new google.maps.Map(document.getElementById('map'), {
+      center: { lat: 14.072479, lng: 120.632137 },
+      zoom: 16
+    });
+    
+    // Add click listener for manual selection
+    map.addListener('click', function(e) {
+      placeMarkerAndReverseGeocode(e.latLng);
+    });
+    
+    mapInitialized = true;
+    console.log("✅ Map initialized");
+    
+    // Process any pending address
+    if (pendingAddress) {
+      moveToAddress(pendingAddress);
+      pendingAddress = null;
+    }
+  }
+
+  // SINGLE VERSION of moveToAddress
+  window.moveToAddress = function(address) {
+    console.log("📍 Received address:", address);
+    
+    if (!mapInitialized) {
+      console.log("⚠️ Map not ready, queuing address");
+      pendingAddress = address;
+      return;
+    }
+    
+    if (!geocoder) {
+      console.error("Geocoder not available");
+      return;
+    }
+    
+    geocoder.geocode({ address: address }, function(results, status) {
+      if (status === 'OK' && results[0]) {
+        const location = results[0].geometry.location;
+        map.setCenter(location);
+        map.setZoom(16);
+        
+        if (marker) {
+          marker.setPosition(location);
+        } else {
+          marker = new google.maps.Marker({
+            position: location,
+            map: map,
+            title: address
+          });
+        }
+        
+        infowindow.setContent(results[0].formatted_address);
+        infowindow.open(map, marker);
+        console.log("✅ Address found:", results[0].formatted_address);
+      } else {
+        console.error("❌ Geocode failed:", status);
+        alert("Could not find: " + address + "\nStatus: " + status);
+      }
+    });
+  };
+
+  function placeMarkerAndReverseGeocode(latLng) {
+    console.log("✅ Clicked at:", latLng.lat(), latLng.lng());
+
+    if (marker) {
+      marker.setPosition(latLng);
+    } else {
+      marker = new google.maps.Marker({
+        position: latLng,
+        map: map,
+        title: "Selected Location"
+      });
+    }
+
+    infowindow.setContent("Loading address...");
+    infowindow.open(map, marker);
+
+    geocoder.geocode({ location: latLng }, function(results, status) {
+      if (status === 'OK' && results.length > 0) {
+        const components = results[0].address_components;
+        
+        const street = components.find(c => c.types.includes("route"))?.long_name || "";
+        const city = components.find(c => c.types.includes("locality"))?.long_name || 
+                    components.find(c => c.types.includes("administrative_area_level_2"))?.long_name || "";
+        const postalCode = components.find(c => c.types.includes("postal_code"))?.long_name || "";
+        const country = components.find(c => c.types.includes("country"))?.long_name || "";
+
+        console.log("🟢 Extracted Address:", { street, city, postalCode, country });
+
+        infowindow.setContent(results[0].formatted_address);
+        infowindow.open(map, marker);
+
+        if (window.javaFXApp && typeof javaFXApp.updateAddress === 'function') {
+          javaFXApp.updateAddress(street, city, postalCode, country);
+        } else {
+          console.error("JavaFX bridge not available");
+        }
+      }
+    });
+  }
+</script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBbspm2lyNyjbOfakcXK-VsXo4pAfGt1vA&callback=initMap&libraries=places" async defer></script>   
+  </head>
+  <body>
+    <div id="map" style="height: 500px; width: 100%;"></div>
+  </body>
+</html>

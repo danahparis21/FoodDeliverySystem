@@ -16,6 +16,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import java.util.List;
+import java.util.Map;
 
 public class CustomerDashboard extends Application {
     private BorderPane mainLayout;
@@ -49,7 +50,7 @@ public class CustomerDashboard extends Application {
         mainLayout.setCenter(scrollPane);
 
         // 🎭 Scene Setup
-        Scene scene = new Scene(mainLayout, 1200, 700);
+        Scene scene = new Scene(mainLayout, 1450, 700);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Customer Dashboard");
         primaryStage.show();
@@ -201,10 +202,15 @@ private void loadCategoryItems(int categoryId) {
         alert.showAndWait();
     }
     
-    private void showCart() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION, "No Added Order.", ButtonType.OK);
-        alert.showAndWait();
+  
+            private void showCart() {
+        ShowCart.displayCart();  // Call the method from ShowCart class
     }
+
+    
+    
+ 
+
 
     private void showProfile() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION, "Profile Details Here", ButtonType.OK);

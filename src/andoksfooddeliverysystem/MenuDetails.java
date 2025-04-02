@@ -106,10 +106,23 @@ public class MenuDetails {
             // 🛒 Add to Cart Button
             Button addToCart = new Button("Add to Cart");
             addToCart.setStyle("-fx-background-color: #ff5733; -fx-text-fill: white; -fx-font-size: 16px;");
+//            addToCart.setOnAction(e -> {
+//                int selectedQuantity = quantitySpinner.getValue(); // Get quantity from spinner
+//                System.out.println("Added to cart: " + itemName + " x" + selectedQuantity);
+//
+//                addItemToCart(itemId, selectedQuantity); // Pass quantity to the cart function
+//                itemStage.close();
+//            });
             addToCart.setOnAction(e -> {
-                System.out.println("Added to cart: " + itemName + " x" + quantitySpinner.getValue());
+                int quantity = quantitySpinner.getValue();
+                String selectedVariation = variationsBox.getValue();
+                String instructions = specialInstructions.getText();
+
+                addItemToCart(itemId, quantity, selectedVariation, instructions);
                 itemStage.close();
             });
+
+
 
             // ❌ Close Button
             Button closeButton = new Button("✖");
@@ -200,4 +213,11 @@ public class MenuDetails {
             e.printStackTrace();
         }
     }
+    public static void addItemToCart(int itemId, int quantity, String selectedVariation, String instructions) {
+//        CartSession.addToCart(itemId, quantity);
+        CartSession.addToCart(itemId, quantity, selectedVariation, instructions);
+        System.out.println("Item added to cart: " + itemId);
+         
+}
+
 }

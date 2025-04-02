@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Choose Address</title>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBbspm2lyNyjbOfakcXK-VsXo4pAfGt1vA&callback=initMap" async defer></script>
+  <script>
+    let map;
+    let geocoder;
+    let infowindow;
+
+    function initMap() {
+      console.log("initMap() is running");
+      geocoder = new google.maps.Geocoder();
+      infowindow = new google.maps.InfoWindow();
+      const defaultLatLng = { lat: 14.0487554, lng: 120.6460636 };  // Nasugbu, Batangas
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: defaultLatLng,
+        zoom: 14  // Set to a higher zoom level for better imagery
+      });
+      console.log('Map should be initialized');
+    }
+  </script>
+</head>
+<body>
+  <div id="map" style="height: 500px; width: 100%;"></div>
+</body>
+</html>
