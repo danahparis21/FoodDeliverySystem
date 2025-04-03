@@ -98,41 +98,72 @@ public class CheckOutWindow {
         progressSection.setAlignment(Pos.CENTER);
 
       // Step 1: Create Address Input Section
-    VBox addressSection = new VBox(10);
-    addressSection.setPadding(new Insets(10));
-    addressSection.setStyle("-fx-border-color: gray; -fx-border-radius: 10; -fx-padding: 10;");
+       VBox addressSection = new VBox(10);
+        addressSection.setPadding(new Insets(10));
+        addressSection.setStyle("-fx-border-color: gray; -fx-border-radius: 10; -fx-padding: 10;");
 
-    // Address fields
-    Label addressLabel = new Label("Enter Shipping Address:");
-    TextField streetField = new TextField();
-    streetField.setPromptText("Street Address");
-    TextField cityField = new TextField();
-    cityField.setPromptText("City");
-    TextField postalCodeField = new TextField();
-    postalCodeField.setPromptText("Postal Code");
-    TextField countryField = new TextField();
-    countryField.setPromptText("Country");
+        // Address fields
+        Label addressLabel = new Label("Enter Shipping Address:");
+        TextField streetField = new TextField();
+        streetField.setPromptText("Street Address");
+        TextField cityField = new TextField();
+        cityField.setPromptText("City");
 
-    // Save button
-    Button saveButton = new Button("Save Address");
-    saveButton.setOnAction(e -> saveAddressToDatabase(
-        streetField.getText(),
-        cityField.getText(),
-        postalCodeField.getText(),
-        countryField.getText()
-    ));
+        // Address type selection
+        ComboBox<String> typeCombo = new ComboBox<>();
+        typeCombo.getItems().addAll("HOME", "WORK", "OTHER");
+        typeCombo.getSelectionModel().selectFirst();
+        typeCombo.setPromptText("Address Type");
 
-    addressSection.getChildren().addAll(
-        addressLabel, 
-        streetField, 
-        cityField, 
-        postalCodeField, 
-        countryField,
-        saveButton
-    );
-    addressSection.setPrefWidth(800);
+        // Default address toggle
+        CheckBox defaultCheck = new CheckBox("Set as default address");
+
+        // Save button
+        Button saveButton = new Button("Save Address");
         
+        saveButton.setOnAction(e -> {
+            
+            // Get current customer ID (you'll need to get this from your session/logged in user)
+            int customerId = 1; // You need to implement this method
+            
+
+            // Validate required fields
+            if (streetField.getText().trim().isEmpty() || cityField.getText().trim().isEmpty()) {
+                showAlert("Validation Error", "Street and City are required fields");
+                return;
+            }
+
+            // Save to database
+            boolean success = saveAddressToDatabase(
+                customerId,
+                streetField.getText().trim(),
+                cityField.getText().trim(),
+                typeCombo.getValue(),
+                defaultCheck.isSelected()
+            );
+
+            if (success) {
+                // Clear fields after successful save
+                streetField.clear();
+                cityField.clear();
+                defaultCheck.setSelected(false);
+                showAlert("Success", "Address saved successfully!");
+            }
+        });
+
+        // Add components to layout
+        addressSection.getChildren().addAll(
+            addressLabel,
+            streetField,
+            cityField,
+            new Label("Address Type:"),
+            typeCombo,
+            defaultCheck,
+            saveButton
+        );
+        addressSection.setPrefWidth(800);
         
+
         // Step 3: Create Payment Method Section (ComboBox)
         Label paymentMethodLabel = new Label("Select Payment Method:");
         ComboBox<String> paymentMethodComboBox = new ComboBox<>();
@@ -213,7 +244,7 @@ public class CheckOutWindow {
 //        rightLayout.setAlignment(Pos.TOP_RIGHT);
 //        rightLayout.getChildren().add();
 
-        mainLayout.getChildren().addAll(progressSection, title, webView, leftLayout,paymentMethodComboBox);
+        mainLayout.getChildren().addAll(progressSection, title, leftLayout,paymentMethodComboBox);
 
         
         //contentBox.getChildren().addAll(checkOutDetails, scrollableItemsBox, summarySection);
@@ -225,6 +256,15 @@ public class CheckOutWindow {
         checkoutStage.setTitle("Cart Summary");
         checkoutStage.showAndWait();
     }
+    
+    // Helper method to show alerts
+private static void showAlert(String title, String message) {
+    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+    alert.setTitle(title);
+    alert.setHeaderText(null);
+    alert.setContentText(message);
+    alert.showAndWait();
+}
         
     public static void removeItem(int itemId) {
         CartSession.getCartItems().remove(itemId);
@@ -309,86 +349,42 @@ public class CheckOutWindow {
      return imagePath; 
  }
  
-// Improved search method
-private static void safeExecuteAddressSearch(WebEngine webEngine, String address) {
-    System.out.println("🔵 Searching for: " + address);
-    
-    if (webEngine.getLoadWorker().getState() != Worker.State.SUCCEEDED) {
-        System.out.println("⚠️ Waiting for page to load...");
-        webEngine.getLoadWorker().stateProperty().addListener(new ChangeListener<Worker.State>() {
-            @Override
-            public void changed(ObservableValue<? extends Worker.State> obs, Worker.State oldState, Worker.State newState) {
-                if (newState == Worker.State.SUCCEEDED) {
-                    Platform.runLater(() -> executeMoveToAddress(webEngine, address));
-                    webEngine.getLoadWorker().stateProperty().removeListener(this);
-                }
-            }
-        });
-        return;
-    }
-    
-    executeMoveToAddress(webEngine, address);
-}
-
-private static void executeMoveToAddress(WebEngine webEngine, String address) {
-    try {
-        String script = String.format(
-            "if (typeof moveToAddress === 'function') {" +
-            "   try {" +
-            "       moveToAddress('%s');" +
-            "       console.log('Address search executed successfully');" +
-            "   } catch (e) {" +
-            "       console.error('Error in moveToAddress:', e);" +
-            "   }" +
-            "} else {" +
-            "   console.error('moveToAddress not found! Available functions:', " +
-            "       Object.keys(window).filter(k => typeof window[k] === 'function'));" +
-            "}", 
-            address.replace("'", "\\'")
-        );
+private static boolean saveAddressToDatabase(int customerId, String street, String city, 
+                                        String addressType, boolean isDefault) {
+    try (Connection conn = Database.connect()) {
+        String sql = "INSERT INTO addresses (customer_id, street, city, address_type, is_default) " +
+                     "VALUES (?, ?, ?, ?, ?)";
         
-        Object result = webEngine.executeScript(script);
-        System.out.println("Search result: " + result);
-    } catch (Exception e) {
-        System.err.println("🔴 Search failed: " + e.getMessage());
-        // Retry after 500ms
-        PauseTransition pause = new PauseTransition(Duration.millis(500));
-        pause.setOnFinished(event -> Platform.runLater(() -> executeMoveToAddress(webEngine, address)));
-        pause.play();
-    }
-}
-
-// JavaScript bridge class
-public static class JavaBridge {
-    private TextField streetField;
-    private TextField cityField;
-    private TextField postalCodeField;
-    private TextField countryField;
-
-    public JavaBridge(TextField streetField, TextField cityField, TextField postalCodeField, TextField countryField) {
-        this.streetField = streetField;
-        this.cityField = cityField;
-        this.postalCodeField = postalCodeField;
-        this.countryField = countryField;
-    }
-
-    
-    public void updateAddress(String street, String city, String postalCode, String country) {
-        // Update the JavaFX fields with the address details
+        PreparedStatement pstmt = conn.prepareStatement(sql);
+        pstmt.setInt(1, customerId);
+        pstmt.setString(2, street);
+        pstmt.setString(3, city);
+        pstmt.setString(4, addressType); // "HOME", "WORK", or "OTHER"
+        pstmt.setBoolean(5, isDefault);
+        
+        int affectedRows = pstmt.executeUpdate();
+        
+        if (affectedRows > 0) {
+            System.out.println("Address saved successfully!");
+            return true;
+        } else {
+            System.out.println("Failed to save address");
+            return false;
+        }
+    } catch (SQLException ex) {
+        System.err.println("Database error: " + ex.getMessage());
+        // Show alert to user
         Platform.runLater(() -> {
-            streetField.setText(street);
-            cityField.setText(city);
-            postalCodeField.setText(postalCode);
-            countryField.setText(country);
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Database Error");
+            alert.setHeaderText("Could not save address");
+            alert.setContentText(ex.getMessage());
+            alert.showAndWait();
         });
+        return false;
     }
 }
 
-
-
-    
-
-    
 
 }
 
