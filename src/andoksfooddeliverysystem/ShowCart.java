@@ -44,7 +44,10 @@ public class ShowCart {
     static Label subtotalLabel;
     static Label totalLabel;
 
-    public static void displayCart() {
+     // ✅ Modify displayCart() to accept customerID
+    public static void displayCart(int customerID) {
+        System.out.println("✅ Opening Cart for User ID: " + customerID); // Debugging
+
         Stage cartStage = new Stage();
         cartStage.initStyle(StageStyle.UTILITY);
         cartStage.initModality(Modality.APPLICATION_MODAL);
@@ -240,11 +243,16 @@ public class ShowCart {
         summaryBox.setAlignment(Pos.TOP_RIGHT);
         // Buttons
         Button reviewPaymentBtn = new Button("Review Payment & Address");
-         reviewPaymentBtn.setOnAction(e -> {
-            CheckOutWindow.displayCheckout(CartSession.getCartItems()); // Pass cart items with details to Checkout
+        reviewPaymentBtn.setOnAction(e -> {
+            CheckOutWindow.displayCheckout(
+                customerID,
+                CartSession.getCartItems(),
+                CartSession.getVariations(),  // ✅ Added variations
+                CartSession.getInstructions() // ✅ Added instructions
+            );
             cartStage.close();
         });
-      
+
         Button closeBtn = new Button("Close");
         
         reviewPaymentBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 16px;");

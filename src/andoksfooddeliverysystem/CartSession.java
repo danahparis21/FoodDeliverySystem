@@ -37,9 +37,23 @@ public class CartSession {
     public static Map<Integer, Integer> getCartItems() {
         return cart;
     }
+    
+        // Get all variations in cart
+    public static Map<Integer, String> getVariations() {
+        return variationMap;
+    }
+
+    // Get all instructions in cart
+    public static Map<Integer, String> getInstructions() {
+        return instructionsMap;
+    }
+
 
     // Clear cart after checkout
     public static void clearCart() {
         cart.clear();
+        variationMap.clear();
+        instructionsMap.clear();
     }
+
 }

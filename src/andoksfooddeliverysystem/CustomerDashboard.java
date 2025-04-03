@@ -19,13 +19,24 @@ import java.util.List;
 import java.util.Map;
 
 public class CustomerDashboard extends Application {
+    private int userID;
     private BorderPane mainLayout;
     private VBox sideBar;
     private GridPane menuGrid;
-
+    
+    // Constructor to receive userID
+    public CustomerDashboard(int userID) {
+        this.userID = userID;
+        System.out.println("✅ CustomerDashboard opened with User ID: " + userID); // Debugging
+    }
+    
     @Override
     public void start(Stage primaryStage) {
+        
         mainLayout = new BorderPane();
+        
+          // Fetch and display customer details based on userID
+        fetchCustomerData(userID);
 
         // 🔝 Top Bar (Search, Notifications, Profile)
         HBox topBar = createTopBar();
@@ -158,6 +169,24 @@ public class CustomerDashboard extends Application {
     }
 }
      
+      private void fetchCustomerData(int userID) {
+        String sql = "SELECT * FROM Customers WHERE user_id = ?";
+
+        try (Connection conn = Database.connect();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, userID);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                String customerName = rs.getString("name");
+                System.out.println("Welcome, " + customerName + "!");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 private void loadCategoryItems(int categoryId) {
     menuGrid.getChildren().clear();
     System.out.println("Loading items for category ID: " + categoryId);
@@ -203,13 +232,10 @@ private void loadCategoryItems(int categoryId) {
     }
     
   
-            private void showCart() {
-        ShowCart.displayCart();  // Call the method from ShowCart class
-    }
+        private void showCart() {
+            ShowCart.displayCart(userID); // ✅ Pass customerID from logged-in user
+        }
 
-    
-    
- 
 
 
     private void showProfile() {

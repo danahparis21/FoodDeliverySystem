@@ -125,7 +125,7 @@ public class User {
             if (role.equals("admin")) {
                 new AdminDashboard().start(new Stage());
             } else if (role.equals("customer")) {
-                new CustomerDashboard().start(new Stage());
+                 new CustomerDashboard(userID).start(new Stage()); 
             }
 
             currentStage.close(); // ✅ Close login window
