@@ -78,7 +78,7 @@ public class MenuDetails {
                     hasVariations = true;
                     String variationName = variationRs.getString("variation_name");
                     double variationPrice = variationRs.getDouble("variation_price");
-                    variationsBox.getItems().add(variationName + " (+₱" + (variationPrice - price) + ")");
+                    variationsBox.getItems().add(variationName + " (₱" + (variationPrice - price) + ")");
                 }
             }
 

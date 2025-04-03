@@ -74,6 +74,9 @@ public class AdminDashboard extends Application {
         sidebar.getChildren().add(riderButton);
         riderButton.setOnAction(e -> showRiderManagement()); 
 
+        Button orderButton = new Button("Orders");
+        sidebar.getChildren().add(orderButton);
+        orderButton.setOnAction(e -> showOrders()); 
         
         // Toggle button (placed in the main layout, not the sidebar)
         Button toggleSidebar = new Button("☰");
@@ -104,6 +107,21 @@ private void showRiderManagement() {
         mainContent.getChildren().add(riderUI);
     }
 }
+
+    private void showOrders() {
+        mainContent.getChildren().clear();
+        System.out.println("Switching to orders");
+
+        ShowOrders showOrders = new ShowOrders();
+        Node riderUI = showOrders.getRoot();
+
+        if (riderUI == null) {
+            System.out.println("❌ Order UI is null!");  // Debugging
+        } else {
+            System.out.println("✅ Adding Order UI to mainContent");
+            mainContent.getChildren().add(riderUI);
+        }
+    }
 
 
 

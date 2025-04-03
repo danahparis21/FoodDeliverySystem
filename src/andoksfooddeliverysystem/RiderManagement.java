@@ -14,6 +14,8 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -301,7 +303,7 @@ public class RiderManagement {
 
             // Generate default username & password
             String defaultUsername = name.replaceAll("\\s+", "").toLowerCase(); // Trim spaces and make lowercase
-            String defaultPassword = "riderpassword"; // Default password
+            String defaultPassword = hashPassword("riderpassword"); // Default password
 
             // Insert into Users table
             userStmt.setString(1, name);
@@ -337,6 +339,21 @@ public class RiderManagement {
             throw e;
         }
     }
+    
+     private static String hashPassword(String password) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hashedBytes = md.digest(password.getBytes());
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hashedBytes) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
       public class RidersList {
     private String name;

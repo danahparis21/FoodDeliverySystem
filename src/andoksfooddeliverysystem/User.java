@@ -127,6 +127,9 @@ public class User {
             } else if (role.equals("customer")) {
                  new CustomerDashboard(userID).start(new Stage()); 
             }
+             else if (role.equals("rider")) {
+                 new RiderDashboard(userID).start(new Stage()); 
+            } 
 
             currentStage.close(); // ✅ Close login window
             return user; // ✅ Return user

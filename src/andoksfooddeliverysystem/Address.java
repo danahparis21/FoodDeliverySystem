@@ -8,13 +8,15 @@ public class Address {
     private String street;
     private String barangay;
     private String addressType;
+    private String contactNumber;
     private boolean isDefault;
 
-    public Address(String street, String barangay, String addressType, boolean isDefault) {
+    public Address(String street, String barangay, String addressType, boolean isDefault, String contactNumber) {
         this.street = street;
         this.barangay = barangay;
         this.addressType = addressType;
         this.isDefault = isDefault;
+        this.contactNumber = contactNumber;
     }
 
     public String getStreet() {
@@ -31,6 +33,10 @@ public class Address {
 
     public boolean isDefault() {
         return isDefault;
+    }
+    
+    public String getContactNumber() {
+        return contactNumber;
     }
 
     @Override

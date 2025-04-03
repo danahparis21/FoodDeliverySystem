@@ -45,6 +45,7 @@ public class CheckOutWindow {
     static Label totalLabel;
     static List<OrderItem> itemsList = new ArrayList<>();
     
+    private static int addressId = -1;
      static double subtotal = 0;
 
    public static void displayCheckout(int customerID, Map<Integer, Integer> cartItems, Map<Integer, String> variations, Map<Integer, String> instructions) {
@@ -124,6 +125,9 @@ public class CheckOutWindow {
         TextField streetField = new TextField();
         streetField.setPromptText("Street Address");
      
+        // Contact number TextField
+        TextField contactNumberField = new TextField();
+        contactNumberField.setPromptText("Contact Number");
 
         // Address type selection
         ComboBox<String> typeCombo = new ComboBox<>();
@@ -135,8 +139,7 @@ public class CheckOutWindow {
         CheckBox defaultCheck = new CheckBox("Set as default address");
 
        
-       // Save Address Logic
-        Button saveButton = new Button("Save Address");
+      Button saveButton = new Button("Save Address");
         saveButton.setOnAction(e -> {
             if (streetField.getText().trim().isEmpty()) {
                 showAlert("Validation Error", "Street is required");
@@ -146,22 +149,35 @@ public class CheckOutWindow {
                 showAlert("Validation Error", "Barangay is required");
                 return;
             }
-             // Save to database
-            boolean success = saveAddressToDatabase(
+            if (contactNumberField.getText().trim().isEmpty()) {
+                showAlert("Validation Error", "Contact number is required");
+                return;
+            }
+
+            // Save address to the database and get the address_id
+            addressId = saveAddressToDatabase(
                 customerID, // ✅ Use correct customerID
                 streetField.getText().trim(),
                 barangayCombo.getSelectionModel().getSelectedItem(),
                 typeCombo.getValue(),
-                defaultCheck.isSelected()
+                defaultCheck.isSelected(),
+                contactNumberField.getText().trim()
             );
 
-            if (success) {
+            if (addressId != -1) {
+                // Clear the fields if the address was successfully saved
                 streetField.clear();
                 barangayCombo.getSelectionModel().clearSelection();
+                contactNumberField.clear();
                 defaultCheck.setSelected(false);
+
+                // Optionally show a success message
                 showAlert("Success", "Address saved successfully!");
+            } else {
+                showAlert("Error", "Failed to save address.");
             }
         });
+
         
         // Address list display (ListView)
         ListView<Address> addressListView = new ListView<>();
@@ -178,6 +194,7 @@ public class CheckOutWindow {
                 barangayCombo.setValue(selectedAddress.getBarangay()); // Set Barangay from selected address
                 typeCombo.setValue(selectedAddress.getAddressType());
                 defaultCheck.setSelected(selectedAddress.isDefault());
+                contactNumberField.setText(selectedAddress.getContactNumber()); 
             }
         });
 
@@ -186,6 +203,7 @@ public class CheckOutWindow {
             addressLabel,
             barangayCombo, // Add Barangay combo box
             streetField,
+             contactNumberField, // Add Contact Number field
             new Label("Address Type:"),
             typeCombo,
             defaultCheck,
@@ -255,18 +273,22 @@ public class CheckOutWindow {
         Label deliveryLabel = new Label("Delivery Fee: ₱49");
         Label totalLabel = new Label("Total: ₱" + String.format("%.2f", subtotal + 49));
         
-        // Place Order Button
-            Button placeOrderBtn = new Button("Place Order");
-            placeOrderBtn.setOnAction(e -> {
+        Button placeOrderBtn = new Button("Place Order");
+        placeOrderBtn.setOnAction(e -> {
+            // Ensure address_id is available, assume it's stored in a variable like `addressId`
+            if (addressId == -1) {
+                showAlert("Error", "Please save your address first.");
+                return;
+            }
+
             String paymentMethod = paymentMethodComboBox.getSelectionModel().getSelectedItem() != null 
                                     ? paymentMethodComboBox.getSelectionModel().getSelectedItem() 
                                     : "COD"; // Default to "COD" if nothing is selected
 
-            // Total price including delivery
             double totalPrice = subtotal + 49.00;  // Adding delivery fee
 
-            // Save the order to the orders database
-            int orderId = saveOrderToDatabase(customerID, totalPrice, paymentMethod);
+            // Save the order using the address_id
+            int orderId = saveOrderToDatabase(customerID, addressId, totalPrice, paymentMethod);
             if (orderId != -1) {
                 // If order is saved successfully, save the order items
                 saveOrderItemsToDatabase(orderId);
@@ -277,6 +299,7 @@ public class CheckOutWindow {
                 showAlert("Error", "Failed to place the order.");
             }
         });
+
 
 
             // Close Button
@@ -344,34 +367,37 @@ public class CheckOutWindow {
 
 
     // Method to save order to the database
-    private static int saveOrderToDatabase(int customerId, double totalPrice, String paymentMethod) {
-        try (Connection conn = Database.connect()) {
-            String sql = "INSERT INTO orders (customer_id, total_price, payment_method, status) " +
-                         "VALUES (?, ?, ?, 'Pending')";
+        private static int saveOrderToDatabase(int customerId, int addressId, double totalPrice, String paymentMethod) {
+         try (Connection conn = Database.connect()) {
+             String sql = "INSERT INTO orders (customer_id, address_id, total_price, payment_method, status) " +
+                          "VALUES (?, ?, ?, ?, 'Pending')";
 
-            PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            pstmt.setInt(1, customerId);
-            pstmt.setDouble(2, totalPrice);
-            pstmt.setString(3, paymentMethod);
+             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+             pstmt.setInt(1, customerId);
+             pstmt.setInt(2, addressId); // Insert the address_id
+             pstmt.setDouble(3, totalPrice);
+             pstmt.setString(4, paymentMethod);
 
-            int affectedRows = pstmt.executeUpdate();
+             int affectedRows = pstmt.executeUpdate();
 
-            if (affectedRows > 0) {
-                ResultSet rs = pstmt.getGeneratedKeys();
-                if (rs.next()) {
-                    return rs.getInt(1); // Return the generated order_id
-                }
-            }
-        } catch (SQLException ex) {
-            System.err.println("Error saving order: " + ex.getMessage());
-        }
-        return -1; // If order saving failed, return -1
-    }
+             if (affectedRows > 0) {
+                 ResultSet rs = pstmt.getGeneratedKeys();
+                 if (rs.next()) {
+                     return rs.getInt(1); // Return the generated order_id
+                 }
+             }
+         } catch (SQLException ex) {
+             System.err.println("Error saving order: " + ex.getMessage());
+         }
+         return -1; // If order saving failed, return -1
+     }
+
 
     private static ObservableList<Address> getCustomerAddresses(int customerId) {
         ObservableList<Address> addresses = FXCollections.observableArrayList();
         try (Connection conn = Database.connect()) {
-            String sql = "SELECT street, barangay_id, address_type, is_default FROM addresses WHERE customer_id = ?";
+            // Modified SQL query to include contact_number
+            String sql = "SELECT street, barangay_id, address_type, is_default, contact_number FROM addresses WHERE customer_id = ?";
             PreparedStatement pstmt = conn.prepareStatement(sql);
             pstmt.setInt(1, customerId);
 
@@ -381,15 +407,17 @@ public class CheckOutWindow {
                 int barangayId = rs.getInt("barangay_id");
                 String addressType = rs.getString("address_type");
                 boolean isDefault = rs.getBoolean("is_default");
+                String contactNumber = rs.getString("contact_number"); // Get contact number
 
                 String barangay = getBarangayNameById(barangayId); // Function to get barangay name by ID
-                addresses.add(new Address(street, barangay, addressType, isDefault));
+                addresses.add(new Address(street, barangay, addressType, isDefault, contactNumber)); // Pass contact number to Address constructor
             }
         } catch (SQLException ex) {
             System.err.println("Error retrieving addresses: " + ex.getMessage());
         }
         return addresses;
     }
+
 
     // Helper method to fetch barangay name by ID
     private static String getBarangayNameById(int barangayId) {
@@ -519,58 +547,93 @@ private static void showAlert(String title, String message) {
  }
  
  // Save address to database with barangay_id as a foreign key
-    private static boolean saveAddressToDatabase(int customerId, String street,
-                                                  String barangay, String addressType, boolean isDefault) {
-        try (Connection conn = Database.connect()) {
-            // First, get barangay_id based on barangay name
-            String barangayIdQuery = "SELECT barangay_id FROM Barangay WHERE barangay_name = ?";
-            PreparedStatement pstmtBarangay = conn.prepareStatement(barangayIdQuery);
-            pstmtBarangay.setString(1, barangay);
-            ResultSet rs = pstmtBarangay.executeQuery();
+    private static int saveAddressToDatabase(int customerId, String street,
+                                                String barangay, String addressType, boolean isDefault, String contactNumber) {
+        street = street.trim();
+      try (Connection conn = Database.connect()) {
+          // First, get barangay_id based on barangay name
+          String barangayIdQuery = "SELECT barangay_id FROM Barangay WHERE barangay_name = ?";
+          PreparedStatement pstmtBarangay = conn.prepareStatement(barangayIdQuery);
+          pstmtBarangay.setString(1, barangay);
+          ResultSet rs = pstmtBarangay.executeQuery();
 
-            int barangayId = -1; // Default value if not found
-            if (rs.next()) {
-                barangayId = rs.getInt("barangay_id");
-            }
+          int barangayId = -1; // Default value if not found
+          if (rs.next()) {
+              barangayId = rs.getInt("barangay_id");
+          }
 
-            if (barangayId == -1) {
-                System.err.println("Invalid Barangay selected!");
-                return false; // Barangay not found
-            }
+          if (barangayId == -1) {
+              System.err.println("Invalid Barangay selected!");
+              return -1; // Barangay not found
+          }
 
-            // Now insert address into the addresses table
-            String sql = "INSERT INTO addresses (customer_id, street, barangay_id, address_type, is_default) " +
-                         "VALUES (?, ?, ?, ?, ?)";
+         // Check if the address already exists for this customer based on street and barangay
+        String checkAddressQuery = "SELECT address_id FROM addresses WHERE customer_id = ? AND street = ? AND barangay_id = ?";
+        PreparedStatement pstmtCheck = conn.prepareStatement(checkAddressQuery);
+        pstmtCheck.setInt(1, customerId);
+        pstmtCheck.setString(2, street);
+        pstmtCheck.setInt(3, barangayId);
+        ResultSet rsCheck = pstmtCheck.executeQuery();
+        System.out.println("Checking if address exists for customer: " + customerId + " and street: " + street + " barangay_id: " + barangayId);
 
-            PreparedStatement pstmt = conn.prepareStatement(sql);
-            pstmt.setInt(1, customerId);
-            pstmt.setString(2, street);
-            pstmt.setInt(3, barangayId); // Use the fetched barangay_id
-            pstmt.setString(4, addressType); // "HOME", "WORK", or "OTHER"
-            pstmt.setBoolean(5, isDefault);
+          if (rsCheck.next()) {
+              // Address exists, so update the existing record
+              int existingAddressId = rsCheck.getInt("address_id");
 
-            int affectedRows = pstmt.executeUpdate();
+              String updateAddressQuery = "UPDATE addresses SET barangay_id = ?, address_type = ?, is_default = ?, contact_number = ? WHERE address_id = ?";
+              PreparedStatement pstmtUpdate = conn.prepareStatement(updateAddressQuery);
+              pstmtUpdate.setInt(1, barangayId);
+              pstmtUpdate.setString(2, addressType);
+              pstmtUpdate.setBoolean(3, isDefault);
+              pstmtUpdate.setString(4, contactNumber);
+              pstmtUpdate.setInt(5, existingAddressId);
 
-            if (affectedRows > 0) {
-                System.out.println("Address saved successfully!");
-                return true;
-            } else {
-                System.out.println("Failed to save address");
-                return false;
-            }
-        } catch (SQLException ex) {
-            System.err.println("Database error: " + ex.getMessage());
-            // Show alert to user
-            Platform.runLater(() -> {
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Database Error");
-                alert.setHeaderText("Could not save address");
-                alert.setContentText(ex.getMessage());
-                alert.showAndWait();
-            });
-            return false;
-        }
-    }
+              int affectedRows = pstmtUpdate.executeUpdate();
+              if (affectedRows > 0) {
+                  System.out.println("Address updated successfully!");
+                   showAlert("Success", "Address updated successfully!");
+                  return existingAddressId;
+              } else {
+                  System.out.println("Failed to update address");
+                  return -1;
+              }
+          } else {
+              // Address does not exist, insert a new record
+              String insertAddressQuery = "INSERT INTO addresses (customer_id, street, barangay_id, address_type, is_default, contact_number) " +
+                                          "VALUES (?, ?, ?, ?, ?, ?)";
+              PreparedStatement pstmtInsert = conn.prepareStatement(insertAddressQuery);
+              pstmtInsert.setInt(1, customerId);
+              pstmtInsert.setString(2, street);
+              pstmtInsert.setInt(3, barangayId);
+              pstmtInsert.setString(4, addressType);
+              pstmtInsert.setBoolean(5, isDefault);
+              pstmtInsert.setString(6, contactNumber);
+
+              int affectedRows = pstmtInsert.executeUpdate();
+                ResultSet rsInsert = pstmtInsert.getGeneratedKeys();
+              if (affectedRows > 0) {
+                  int newAddressId = rsInsert.getInt(1); // Get the generated address_id
+                    System.out.println("Address saved successfully!");
+                    return newAddressId; // Return the generated address_id
+              } else {
+                  System.out.println("Failed to save address");
+                  return -1;
+              }
+          }
+      } catch (SQLException ex) {
+          System.err.println("Database error: " + ex.getMessage());
+          // Show alert to user
+          Platform.runLater(() -> {
+              Alert alert = new Alert(Alert.AlertType.ERROR);
+              alert.setTitle("Database Error");
+              alert.setHeaderText("Could not save address");
+              alert.setContentText(ex.getMessage());
+              alert.showAndWait();
+          });
+          return -1;
+      }
+  }
+
 
 }
 
