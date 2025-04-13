@@ -20,6 +20,11 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 
 import java.sql.SQLException;
+import javafx.geometry.Pos;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 
 
 
@@ -35,34 +40,80 @@ public class ShowOrders {
 
         // Create the main container with scroll pane
         ScrollPane scrollPane = new ScrollPane();
-        scrollPane.setFitToWidth(true); // Makes content use full width
+        scrollPane.setFitToWidth(true); 
         scrollPane.setStyle("-fx-background: white; -fx-border-color: transparent;");
-        // Remove the fixed height, let it fill available space
+      
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
-        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER); // If you don't want horizontal scrolling
-
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER); 
+             
         // Create a VBox to hold all orders
         VBox ordersContainer = new VBox(10);
         ordersContainer.setPadding(new Insets(10)); // Add padding around all orders
         ordersContainer.setStyle("-fx-background-color: white;");
 
-        // Loop through the orders and create UI elements for each order
-        for (Order order : orders) {
-                        VBox orderBox = new VBox(10);
-            orderBox.setStyle("-fx-background-color: white; -fx-border-color: lightgray; -fx-padding: 10;");
+       ordersContainer.getChildren().clear(); // Prevent duplicates if refreshing
 
-            // Create a container for the non-expandable content
+        for (Order order : orders) {
+            VBox orderBox = new VBox(10);
+            orderBox.setPadding(new Insets(10));
+            orderBox.setStyle("-fx-background-color: white; -fx-border-color: lightgray;");
+
+
             VBox mainContent = new VBox(10);
+            
+           /// === STATUS LABEL SETUP ===//
+            String status = order.getOrderStatus(); // Get status from DB
+            Label statusLabel = new Label(); // We will build text and style below
+            statusLabel.setStyle("-fx-font-weight: bold;");
+
+            String statusText = status.toLowerCase();
+            Color statusColor = Color.BLACK; // Default color
+            Circle statusCircle = new Circle(10); // Create a small circle for the status indicator
+
+            switch (statusText) {
+                case "pending":
+                    statusCircle.setFill(Color.RED); // Red circle for pending
+                    statusColor = Color.RED;
+                    break;
+                case "preparing":
+                    statusCircle.setFill(Color.ORANGE); // Orange circle for preparing
+                    statusColor = Color.ORANGE;
+                    break;
+                case "out for delivery":
+                    statusCircle.setFill(Color.GOLD); // Yellow circle for out for delivery
+                    statusColor = Color.GOLD;
+                    break;
+                case "completed":
+                    statusCircle.setFill(Color.GREEN); // Green circle for completed
+                    statusColor = Color.GREEN;
+                    break;
+                case "cancelled":
+                    statusCircle.setFill(Color.GRAY); // Gray circle for cancelled
+                    statusColor = Color.GRAY;
+                    break;
+                default:
+                    statusCircle.setFill(Color.BLACK); // Default black circle
+                    statusColor = Color.BLACK;
+            }
+
+                      
+                statusLabel.setText(capitalize(statusText));
+                // Add the status circle next to the label
+                HBox statusBox = new HBox(5, statusCircle, statusLabel);
+                statusBox.setAlignment(Pos.CENTER_LEFT);
 
             // Create labels for order summary with better formatting
             Label orderIdLabel = new Label("Order #" + order.getOrderId());
             orderIdLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+            
+             HBox idStatusBox = new HBox(10, orderIdLabel, statusBox);
+            idStatusBox.setAlignment(Pos.CENTER_LEFT);
 
             Label dateLabel = new Label("Date: " + order.getOrderDate());
             Label totalLabel = new Label(String.format("Total: ₱%.2f", order.getTotalPrice()));
             totalLabel.setStyle("-fx-text-fill: green; -fx-font-size: 14px;");
 
-            // Address section with better layout
+            // Address section
             VBox addressBox = new VBox(5);
             Label addressHeader = new Label("Delivery Address:");
             addressHeader.setStyle("-fx-font-weight: bold;");
@@ -73,17 +124,16 @@ public class ShowOrders {
 
             addressBox.getChildren().addAll(addressHeader, streetBox, barangayBox, contactBox);
 
-            // Add main content to container
-            mainContent.getChildren().addAll(orderIdLabel, dateLabel, totalLabel, addressBox);
+             mainContent.getChildren().addAll(idStatusBox, dateLabel, totalLabel, addressBox);
 
-            // Create the expandable details section
+            // === DETAILS BOX (initially hidden) ===
             VBox orderDetailsBox = new VBox(10);
-            orderDetailsBox.setVisible(false); // Start hidden
-            orderDetailsBox.setPadding(new Insets(10, 0, 0, 10)); // Top padding to separate from address
+            orderDetailsBox.setVisible(false);
+            orderDetailsBox.setPadding(new Insets(10, 0, 0, 10));
 
             // Build details content
             for (DetailedOrderItem item : order.getOrderItems()) {
-    HBox itemBox = new HBox(10);
+            HBox itemBox = new HBox(10);
     
              // Get the item name (with fallback to "Unknown Item" if null)
                 String itemName = (item.getItemName() == null || item.getItemName().isEmpty())
@@ -121,60 +171,68 @@ public class ShowOrders {
             Button assignToRiderButton = new Button("Assign to Rider");
             assignToRiderButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
 
-            // When the assign button is clicked, we show the rider selection dialog
-            assignToRiderButton.setOnAction(assign -> {
-                // Show the rider selection dialog
+            ImageView imageView = new ImageView();
+            imageView.setFitWidth(200); // Set the width of the image
+            imageView.setFitHeight(200); // Set the height of the image
+            imageView.setPreserveRatio(true); // Maintain the aspect ratio of the image
+
+                        // Assuming you are getting the proof of delivery image path from the database (proof_of_delivery_image_path)
+            String proofOfDeliveryImagePath = order.getProofOfDeliveryImagePath();
+
+            // If the order is completed and the proof of delivery image exists, load the image
+            if (status.equalsIgnoreCase("completed") && proofOfDeliveryImagePath != null && !proofOfDeliveryImagePath.isEmpty()) {
+                // Load the image from the file path
+                Image image = new Image("file:" + proofOfDeliveryImagePath);
+                imageView.setImage(image);
+            } else {
+                // Optionally, set the image view to null or a placeholder if no proof image
+                imageView.setImage(null); // or set a placeholder image
+            }
+            
+           assignToRiderButton.setOnAction(assign -> {
                 showRiderSelectionDialog(order);
-
-                // Disable the assign button after assigning the rider
                 assignToRiderButton.setDisable(true);
-
-                // Enable the "Order Picked Up" button after assigning the rider
-                orderPickedUpButton.setDisable(false);  // Now it's enabled
+                orderPickedUpButton.setDisable(false);
             });
 
-            // Order Picked Up button (disabled initially)
-          
-            // Action for "Order Picked Up" button
+        
             orderPickedUpButton.setOnAction(pickedUp -> {
-            // Mark the order as picked up in the database
-            markOrderPickedUp(order);
-
-            // Disable the button after it's picked up
-            orderPickedUpButton.setDisable(true);
-
-            // Change the order box's color to gray
-            orderBox.setStyle("-fx-background-color: #d3d3d3;"); // Light gray color
-
-            // Move the order box to the last row (for example, assuming 'ordersContainer' is your ScrollPane or VBox)
-            ordersContainer.getChildren().remove(orderBox);  // Remove it from current position
-            ordersContainer.getChildren().add(orderBox);     // Add it at the last position
-
-            
-        });
+                markOrderPickedUp(order);
+                orderPickedUpButton.setDisable(true);
+                orderBox.setStyle("-fx-background-color: #d3d3d3;");
+                ordersContainer.getChildren().remove(orderBox);
+                ordersContainer.getChildren().add(orderBox);
+            });
 
 
-            // Add the buttons to the details box
-            orderDetailsBox.getChildren().addAll(assignToRiderButton, orderPickedUpButton);
+//            orderDetailsBox.getChildren().addAll(assignToRiderButton, orderPickedUpButton);
 
             // Expand/collapse button
             Button expandButton = new Button("▼ Show Details");
-            expandButton.setStyle("-fx-background-color: transparent; -fx-border-color: transparent;");
-
             expandButton.setOnAction(e -> {
                 boolean isExpanded = !orderDetailsBox.isVisible();
                 orderDetailsBox.setVisible(isExpanded);
                 expandButton.setText(isExpanded ? "▲ Hide Details" : "▼ Show Details");
 
-                // Ensure the details appear below all content
                 if (isExpanded && !orderBox.getChildren().contains(orderDetailsBox)) {
                     orderBox.getChildren().add(orderDetailsBox);
+                } else if (!isExpanded) {
+                    orderBox.getChildren().remove(orderDetailsBox);
                 }
             });
 
-            // Add all components to main container
-            orderBox.getChildren().addAll(mainContent, expandButton, orderDetailsBox);
-            ordersContainer.getChildren().add(orderBox);
+           
+             orderDetailsBox.getChildren().addAll(assignToRiderButton, orderPickedUpButton, imageView);
+            orderBox.getChildren().addAll(mainContent, expandButton);
+
+             // === ADD ORDER BOX ===
+            if (status.equalsIgnoreCase("out for delivery") || status.equalsIgnoreCase("completed") || status.equalsIgnoreCase("cancelled")) {
+                orderBox.setStyle("-fx-background-color: #d3d3d3;");
+                ordersContainer.getChildren().add(orderBox); // Add later so it ends up at the bottom
+            } else {
+                ordersContainer.getChildren().add(0, orderBox); // Add to the top for pending-type orders
+            }
+
         }
         
         // Set the orders container as the content of the scroll pane
@@ -186,7 +244,12 @@ public class ShowOrders {
         VBox.setVgrow(scrollPane, Priority.ALWAYS); 
     }
     
-    // Method to mark the order as picked up in the database
+    private String capitalize(String text) {
+    if (text == null || text.isEmpty()) return "";
+    return text.substring(0, 1).toUpperCase() + text.substring(1);
+}
+
+  
         private void markOrderPickedUp(Order order) {
             String updateQuery = "UPDATE orders SET status = 'Out for Delivery' WHERE order_id = ?";
 
@@ -208,22 +271,21 @@ public class ShowOrders {
 
 
     private void showRiderSelectionDialog(Order order) {
-        // Assuming you have a method to get the connection
+     
         Connection connection = connect();
 
-        // Create a new Stage (window) for the rider selection
+     
         Stage riderSelectionStage = new Stage();
         riderSelectionStage.setTitle("Assign Rider to Order #" + order.getOrderId());
 
-        // Create a VBox layout for the rider selection window
+     
         VBox riderSelectionLayout = new VBox(10);
         riderSelectionLayout.setPadding(new Insets(20));
 
-        // Create a ComboBox to display the available riders
         ComboBox<Rider> riderComboBox = new ComboBox<>();
 
-        // Fetch riders from the database (you can use the RiderService for this)
-        RiderService riderService = new RiderService(connection);  // Assuming 'connection' is your DB connection
+   
+        RiderService riderService = new RiderService(connection); 
         List<Rider> riders = riderService.getAllRiders();
 
         // Add riders to the ComboBox
@@ -232,36 +294,36 @@ public class ShowOrders {
         // Label to inform the user
         Label instructionLabel = new Label("Select a rider to assign to this order:");
 
-        // Create a button to confirm rider assignment
+      
         Button assignButton = new Button("Assign Rider");
         assignButton.setOnAction(e -> {
             Rider selectedRider = riderComboBox.getValue();
             if (selectedRider != null) {
-                // Assign the order to the selected rider in the database
+         
                 assignOrderToRider(order.getOrderId(), selectedRider.getRiderId());
 
-                // Close the rider selection window
+     
                 riderSelectionStage.close();
 
-                // Optionally, show confirmation or refresh the UI
+              
                 showAlert("Success", "Order #" + order.getOrderId() + " has been assigned to " + selectedRider.getName());
             } else {
                 showAlert("Error", "Please select a rider.");
             }
         });
 
-        // Add all components to the layout
+    
         riderSelectionLayout.getChildren().addAll(instructionLabel, riderComboBox, assignButton);
 
-        // Set the layout to the scene of the stage
+      
         Scene scene = new Scene(riderSelectionLayout, 300, 200);
         riderSelectionStage.setScene(scene);
 
-        // Show the window
+      
         riderSelectionStage.show();
     }
         private void assignOrderToRider(int orderId, int riderId) {
-            // Assuming you have a method to get the connection
+        
         Connection connection = connect();
 
         String updateQuery = "UPDATE orders SET rider_id = ? WHERE order_id = ?";

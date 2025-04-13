@@ -14,11 +14,13 @@ public class Order {
     private String barangay;
     private List<DetailedOrderItem> orderItems;
         private String contactNumber;
+        private String orderStatus;
+        private String imagePath;
 
     // Constructor
     public Order(int orderId, double totalPrice, String orderDate,
             String street, String barangay, List<DetailedOrderItem> orderItems, 
-            String contactNumber) {
+            String contactNumber, String orderStatus, String imagePath) {
         this.orderId = orderId;
         this.totalPrice = totalPrice;
         this.orderDate = orderDate;
@@ -26,6 +28,8 @@ public class Order {
         this.barangay = barangay;
         this.orderItems = orderItems;
          this.contactNumber = contactNumber;
+        this.orderStatus = orderStatus;
+        this.imagePath = imagePath;
     }
 
     // Getters
@@ -57,6 +61,13 @@ public class Order {
         return contactNumber;
     }
     
+    public String getOrderStatus() {
+        return orderStatus;
+    }
+    
+     public String getProofOfDeliveryImagePath() {
+        return imagePath;
+    }
         // Setters
     public void setOrderId(int orderId) {
         this.orderId = orderId;

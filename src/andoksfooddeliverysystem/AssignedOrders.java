@@ -5,13 +5,18 @@
 package andoksfooddeliverysystem;
 
 import static andoksfooddeliverysystem.Database.connect;
+import java.awt.Desktop;
 import java.io.File;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.ResultSet;
 import java.util.List;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -23,6 +28,8 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -40,34 +47,81 @@ public class AssignedOrders {
 
         // Create the main container with scroll pane
         ScrollPane scrollPane = new ScrollPane();
-        scrollPane.setFitToWidth(true); // Makes content use full width
+        scrollPane.setFitToWidth(true); 
         scrollPane.setStyle("-fx-background: white; -fx-border-color: transparent;");
-        // Remove the fixed height, let it fill available space
+      
         scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
-        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER); // If you don't want horizontal scrolling
-
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER); 
+        
+        
         // Create a VBox to hold all orders
         VBox ordersContainer = new VBox(10);
         ordersContainer.setPadding(new Insets(10)); // Add padding around all orders
         ordersContainer.setStyle("-fx-background-color: white;");
 
-        // Loop through the orders and create UI elements for each order
-        for (Order order : orders) {
-                        VBox orderBox = new VBox(10);
-            orderBox.setStyle("-fx-background-color: white; -fx-border-color: lightgray; -fx-padding: 10;");
+       ordersContainer.getChildren().clear(); // Prevent duplicates if refreshing
 
-            // Create a container for the non-expandable content
+        for (Order order : orders) {
+            VBox orderBox = new VBox(10);
+            orderBox.setPadding(new Insets(10));
+            orderBox.setStyle("-fx-background-color: white; -fx-border-color: lightgray;");
+
+
             VBox mainContent = new VBox(10);
+            
+           /// === STATUS LABEL SETUP ===//
+            String status = order.getOrderStatus(); // Get status from DB
+            Label statusLabel = new Label(); // We will build text and style below
+            statusLabel.setStyle("-fx-font-weight: bold;");
+
+            String statusText = status.toLowerCase();
+            Color statusColor = Color.BLACK; // Default color
+            Circle statusCircle = new Circle(10); // Create a small circle for the status indicator
+
+            switch (statusText) {
+                case "pending":
+                    statusCircle.setFill(Color.RED); // Red circle for pending
+                    statusColor = Color.RED;
+                    break;
+                case "preparing":
+                    statusCircle.setFill(Color.ORANGE); // Orange circle for preparing
+                    statusColor = Color.ORANGE;
+                    break;
+                case "out for delivery":
+                    statusCircle.setFill(Color.GOLD); // Yellow circle for out for delivery
+                    statusColor = Color.GOLD;
+                    break;
+                case "completed":
+                    statusCircle.setFill(Color.GREEN); // Green circle for completed
+                    statusColor = Color.GREEN;
+                    break;
+                case "cancelled":
+                    statusCircle.setFill(Color.GRAY); // Gray circle for cancelled
+                    statusColor = Color.GRAY;
+                    break;
+                default:
+                    statusCircle.setFill(Color.BLACK); // Default black circle
+                    statusColor = Color.BLACK;
+            }
+
+                      
+                statusLabel.setText(capitalize(statusText));
+                // Add the status circle next to the label
+                HBox statusBox = new HBox(5, statusCircle, statusLabel);
+                statusBox.setAlignment(Pos.CENTER_LEFT);
 
             // Create labels for order summary with better formatting
             Label orderIdLabel = new Label("Order #" + order.getOrderId());
             orderIdLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+            
+             HBox idStatusBox = new HBox(10, orderIdLabel, statusBox);
+            idStatusBox.setAlignment(Pos.CENTER_LEFT);
 
             Label dateLabel = new Label("Date: " + order.getOrderDate());
             Label totalLabel = new Label(String.format("Total: ₱%.2f", order.getTotalPrice()));
             totalLabel.setStyle("-fx-text-fill: green; -fx-font-size: 14px;");
 
-            // Address section with better layout
+            // Address section
             VBox addressBox = new VBox(5);
             Label addressHeader = new Label("Delivery Address:");
             addressHeader.setStyle("-fx-font-weight: bold;");
@@ -78,17 +132,51 @@ public class AssignedOrders {
 
             addressBox.getChildren().addAll(addressHeader, streetBox, barangayBox, contactBox);
 
-            // Add main content to container
-            mainContent.getChildren().addAll(orderIdLabel, dateLabel, totalLabel, addressBox);
+      
+              Button trackButton = new Button("📍 Track");
+            trackButton.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white;");
 
-            // Create the expandable details section
+            trackButton.setOnAction(e -> {
+            try {
+                String street = order.getStreet();
+                String barangay = order.getBarangay();
+
+                // Prevent duplication
+                String fullAddress = street;
+                if (!street.toLowerCase().contains("nasugbu") && !street.toLowerCase().contains("batangas")) {
+                    fullAddress += ", " + barangay + ", Nasugbu, Batangas";
+                } else if (!street.toLowerCase().contains(barangay.toLowerCase())) {
+                    fullAddress += ", " + barangay;
+                }
+
+                System.out.println("Final address: " + fullAddress);
+
+                String encodedAddress = URLEncoder.encode(fullAddress, StandardCharsets.UTF_8);
+                String url = "https://www.google.com/maps/search/?api=1&query=" + encodedAddress;
+
+                Desktop.getDesktop().browse(new URI(url));
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
+            
+            // Create HBox to hold both the addressBox and the Track button
+            HBox trackAddressBox = new HBox(10); // Increase spacing if needed
+            trackAddressBox.setAlignment(Pos.CENTER_LEFT); // Align items to the left
+            trackAddressBox.getChildren().addAll(addressBox, trackButton);
+
+       
+             mainContent.getChildren().addAll(idStatusBox, dateLabel, totalLabel, trackAddressBox);
+
+             
+            // === DETAILS BOX (initially hidden) ===
             VBox orderDetailsBox = new VBox(10);
-            orderDetailsBox.setVisible(false); // Start hidden
-            orderDetailsBox.setPadding(new Insets(10, 0, 0, 10)); // Top padding to separate from address
+            orderDetailsBox.setVisible(false);
+            orderDetailsBox.setPadding(new Insets(10, 0, 0, 10));
 
             // Build details content
             for (DetailedOrderItem item : order.getOrderItems()) {
-    HBox itemBox = new HBox(10);
+            HBox itemBox = new HBox(10);
     
              // Get the item name (with fallback to "Unknown Item" if null)
                 String itemName = (item.getItemName() == null || item.getItemName().isEmpty())
@@ -118,6 +206,11 @@ public class AssignedOrders {
                 itemBox.getChildren().addAll(itemLabel, detailsBox);
                 orderDetailsBox.getChildren().add(itemBox);
             }
+            
+          
+
+
+
 
             ImageView imageView = new ImageView();
             imageView.setFitWidth(200); // Set the width of the image
@@ -126,12 +219,24 @@ public class AssignedOrders {
 
              Button uploadProofButton = new Button("Upload Proof of Delivery");
             uploadProofButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
-            
 
             Button completeOrderButton = new Button("Complete Order");
             completeOrderButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
             completeOrderButton.setDisable(true); // Initially disabled
-            // When the assign button is clicked, we show the rider selection dialog
+          
+            // Assuming you are getting the proof of delivery image path from the database (proof_of_delivery_image_path)
+            String proofOfDeliveryImagePath = order.getProofOfDeliveryImagePath();
+
+            // If the order is completed and the proof of delivery image exists, load the image
+            if (status.equalsIgnoreCase("completed") && proofOfDeliveryImagePath != null && !proofOfDeliveryImagePath.isEmpty()) {
+                // Load the image from the file path
+                Image image = new Image("file:" + proofOfDeliveryImagePath);
+                imageView.setImage(image);
+            } else {
+                // Optionally, set the image view to null or a placeholder if no proof image
+                imageView.setImage(null); // or set a placeholder image
+            }
+
              uploadProofButton.setOnAction(uploadProof -> {
                 Stage stage = (Stage) root.getScene().getWindow();
 
@@ -140,62 +245,59 @@ public class AssignedOrders {
                 File file = fileChooser.showOpenDialog(stage);
 
                 if (file != null) {
-                    String imagePath = file.getAbsolutePath();  // Get the file path of the uploaded image
-
-                    // Upload the proof of delivery (either update the orders table or insert into a separate table)
-                    uploadProofOfDelivery(order, imagePath);  // Or insertProofOfDelivery(order.getOrderId(), imagePath);
-
-                    // Display the image in the ImageView
+                    String imagePath = file.getAbsolutePath();
+                    uploadProofOfDelivery(order, imagePath);  
                     Image image = new Image("file:" + imagePath);
                     imageView.setImage(image);
 
-                    // Disable the "Upload Proof" button and enable "Complete Order"
                     uploadProofButton.setDisable(true);
                     completeOrderButton.setDisable(false);
                 }
             });
 
-            // Action for "Order Picked Up" button
             completeOrderButton.setOnAction(pickedUp -> {
-            // Mark the order as picked up in the database
             markOrderCompleted(order);
-
-            // Disable the button after it's picked up
             completeOrderButton.setDisable(true);
-
             orderBox.setStyle("-fx-background-color: #d3d3d3;"); // Light gray color
-
-            // Move the order box to the last row (for example, assuming 'ordersContainer' is your ScrollPane or VBox)
-            ordersContainer.getChildren().remove(orderBox);  // Remove it from current position
-            ordersContainer.getChildren().add(orderBox);     // Add it at the last position
+            ordersContainer.getChildren().remove(orderBox);  
+            ordersContainer.getChildren().add(orderBox);    
 
             
         });
 
-
-            // Add the buttons to the details box
-            orderDetailsBox.getChildren().addAll(uploadProofButton, imageView, completeOrderButton);
-
-            // Expand/collapse button
+           // Expand/collapse button
             Button expandButton = new Button("▼ Show Details");
-            expandButton.setStyle("-fx-background-color: transparent; -fx-border-color: transparent;");
-
             expandButton.setOnAction(e -> {
                 boolean isExpanded = !orderDetailsBox.isVisible();
                 orderDetailsBox.setVisible(isExpanded);
                 expandButton.setText(isExpanded ? "▲ Hide Details" : "▼ Show Details");
 
-                // Ensure the details appear below all content
                 if (isExpanded && !orderBox.getChildren().contains(orderDetailsBox)) {
                     orderBox.getChildren().add(orderDetailsBox);
+                } else if (!isExpanded) {
+                    orderBox.getChildren().remove(orderDetailsBox);
                 }
             });
+            
+         
+            
+            orderDetailsBox.getChildren().addAll(uploadProofButton, imageView, completeOrderButton);
 
-            // Add all components to main container
-            orderBox.getChildren().addAll(mainContent, expandButton, orderDetailsBox);
-            ordersContainer.getChildren().add(orderBox);
+            orderBox.getChildren().addAll(mainContent, expandButton);
+            
+             // === ADD ORDER BOX ===
+            if (status.equalsIgnoreCase("completed") || status.equalsIgnoreCase("cancelled")) {
+                orderBox.setStyle("-fx-background-color: #d3d3d3;");
+                completeOrderButton.setDisable(true);
+                uploadProofButton.setDisable(true);
+                
+                ordersContainer.getChildren().add(orderBox); // Add later so it ends up at the bottom
+            } else {
+                ordersContainer.getChildren().add(0, orderBox); // Add to the top for pending-type orders
+            }
+
         }
-        
+
         // Set the orders container as the content of the scroll pane
         scrollPane.setContent(ordersContainer);
 
@@ -205,6 +307,10 @@ public class AssignedOrders {
         VBox.setVgrow(scrollPane, Priority.ALWAYS); 
     }
     
+       private String capitalize(String text) {
+    if (text == null || text.isEmpty()) return "";
+    return text.substring(0, 1).toUpperCase() + text.substring(1);
+}
     // Method to upload proof of delivery (image)
 public void uploadProofOfDelivery(Order order, String imagePath) {
     String query = "UPDATE orders SET proof_of_delivery_image_path = ? WHERE order_id = ?";
@@ -245,81 +351,7 @@ public void uploadProofOfDelivery(Order order, String imagePath) {
         }
 
 
-    private void showRiderSelectionDialog(Order order) {
-        // Assuming you have a method to get the connection
-        Connection connection = connect();
-
-        // Create a new Stage (window) for the rider selection
-        Stage riderSelectionStage = new Stage();
-        riderSelectionStage.setTitle("Assign Rider to Order #" + order.getOrderId());
-
-        // Create a VBox layout for the rider selection window
-        VBox riderSelectionLayout = new VBox(10);
-        riderSelectionLayout.setPadding(new Insets(20));
-
-        // Create a ComboBox to display the available riders
-        ComboBox<Rider> riderComboBox = new ComboBox<>();
-
-        // Fetch riders from the database (you can use the RiderService for this)
-        RiderService riderService = new RiderService(connection);  // Assuming 'connection' is your DB connection
-        List<Rider> riders = riderService.getAllRiders();
-
-        // Add riders to the ComboBox
-        riderComboBox.getItems().addAll(riders);
-
-        // Label to inform the user
-        Label instructionLabel = new Label("Select a rider to assign to this order:");
-
-        // Create a button to confirm rider assignment
-        Button assignButton = new Button("Assign Rider");
-        assignButton.setOnAction(e -> {
-            Rider selectedRider = riderComboBox.getValue();
-            if (selectedRider != null) {
-                // Assign the order to the selected rider in the database
-                assignOrderToRider(order.getOrderId(), selectedRider.getRiderId());
-
-                // Close the rider selection window
-                riderSelectionStage.close();
-
-                // Optionally, show confirmation or refresh the UI
-                showAlert("Success", "Order #" + order.getOrderId() + " has been assigned to " + selectedRider.getName());
-            } else {
-                showAlert("Error", "Please select a rider.");
-            }
-        });
-
-        // Add all components to the layout
-        riderSelectionLayout.getChildren().addAll(instructionLabel, riderComboBox, assignButton);
-
-        // Set the layout to the scene of the stage
-        Scene scene = new Scene(riderSelectionLayout, 300, 200);
-        riderSelectionStage.setScene(scene);
-
-        // Show the window
-        riderSelectionStage.show();
-    }
-        private void assignOrderToRider(int orderId, int riderId) {
-            // Assuming you have a method to get the connection
-        Connection connection = connect();
-
-        String updateQuery = "UPDATE orders SET rider_id = ? WHERE order_id = ?";
-
-        try (PreparedStatement preparedStatement = connection.prepareStatement(updateQuery)) {
-            preparedStatement.setInt(1, riderId);
-            preparedStatement.setInt(2, orderId);
-            preparedStatement.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-        private void showAlert(String title, String message) {
-    Alert alert = new Alert(Alert.AlertType.INFORMATION);
-    alert.setTitle(title);
-    alert.setContentText(message);
-    alert.showAndWait();
-}
-
-
+ 
 
     public VBox getRoot() {
         return root;

@@ -456,6 +456,12 @@ if (imageView.getImage() != null) {
                     }
                 }
                 System.out.println("Variations added successfully!");
+                // ✅ Show success alert
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Menu Item Saved");
+            alert.setHeaderText(null);
+            alert.setContentText("The menu item and its variations have been saved successfully!");
+            alert.showAndWait();
 
                 
             }
