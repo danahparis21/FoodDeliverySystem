@@ -75,10 +75,6 @@ public class ShowOrders {
                     statusCircle.setFill(Color.RED); // Red circle for pending
                     statusColor = Color.RED;
                     break;
-                case "preparing":
-                    statusCircle.setFill(Color.ORANGE); // Orange circle for preparing
-                    statusColor = Color.ORANGE;
-                    break;
                 case "out for delivery":
                     statusCircle.setFill(Color.GOLD); // Yellow circle for out for delivery
                     statusColor = Color.GOLD;

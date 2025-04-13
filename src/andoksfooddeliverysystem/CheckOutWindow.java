@@ -18,6 +18,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import java.util.Map;
+import java.util.Optional;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.image.Image;
@@ -45,7 +46,11 @@ public class CheckOutWindow {
     static Label totalLabel;
     static List<OrderItem> itemsList = new ArrayList<>();
     
+    // At the top of your class, outside of any method:
     private static int addressId = -1;
+    private static Address selectedAddress;
+     private static double totalPrice;
+
      static double subtotal = 0;
 
    public static void displayCheckout(int customerID, Map<Integer, Integer> cartItems, Map<Integer, String> variations, Map<Integer, String> instructions) {
@@ -186,10 +191,14 @@ public class CheckOutWindow {
         // Make the list scrollable
         addressListView.setPrefHeight(100);  // Adjust height as needed
 
+        // Track selected address's ID
+    
         // When an address is selected, populate the fields
         addressListView.setOnMouseClicked(event -> {
-            Address selectedAddress = addressListView.getSelectionModel().getSelectedItem();
+                 selectedAddress = addressListView.getSelectionModel().getSelectedItem();
             if (selectedAddress != null) {
+                
+                addressId = selectedAddress.getAddressId(); // Set the address ID
                 streetField.setText(selectedAddress.getStreet());
                 barangayCombo.setValue(selectedAddress.getBarangay()); // Set Barangay from selected address
                 typeCombo.setValue(selectedAddress.getAddressType());
@@ -215,8 +224,16 @@ public class CheckOutWindow {
         // Step 3: Create Payment Method Section (ComboBox)
         Label paymentMethodLabel = new Label("Select Payment Method:");
         ComboBox<String> paymentMethodComboBox = new ComboBox<>();
-        paymentMethodComboBox.getItems().addAll("Cash", "Credit/Debit Card");
+        paymentMethodComboBox.getItems().addAll("Cash", "Credit/Debit Card", "GCash");
         paymentMethodComboBox.setValue("Cash"); // Set default payment option
+        
+        VBox cardSelectionContainer = new VBox();
+        
+        VBox paymentSelectionContainer = new VBox();
+
+
+        
+
 
         // Order Summary Box
         VBox orderSummary = new VBox(5);
@@ -229,6 +246,8 @@ public class CheckOutWindow {
          for (Map.Entry<Integer, Integer> entry : cartItems.entrySet()) {
             int itemId = entry.getKey();
             int quantity = entry.getValue();
+            
+            
 
             String variationText = variations.getOrDefault(itemId, "No variation");
             String instructionsText = instructions.getOrDefault(itemId, "No instructions");
@@ -239,7 +258,7 @@ public class CheckOutWindow {
             
             String itemName = getItemNameById(itemId);
             double itemPrice = getItemPriceById(itemId);
-            double totalPrice = itemPrice * quantity;
+             totalPrice = itemPrice * quantity;
             subtotal += totalPrice;
 
             // Create Item Display in Checkout
@@ -267,6 +286,74 @@ public class CheckOutWindow {
             OrderItem orderItem = new OrderItem(itemId, quantity, subtotal);
             itemsList.add(orderItem);
         }
+         
+          paymentMethodComboBox.valueProperty().addListener((observable, oldValue, newValue) -> {
+        cardSelectionContainer.getChildren().clear(); // Clear previous UI
+
+        if ("Credit/Debit Card".equals(newValue)) {
+            List<Card> savedCards = getSavedCardsForCustomer(customerID); // Your DB method
+
+            if (!savedCards.isEmpty()) {
+                Label selectCardLabel = new Label("Select Saved Card:");
+                ComboBox<Card> savedCardComboBox = new ComboBox<>();
+                savedCardComboBox.setPromptText("Choose a saved card");
+
+                // Add saved cards to the combo box
+                savedCardComboBox.getItems().addAll(savedCards);
+
+                // Add a "dummy" card item for adding a new card
+                Card addNewCard = new Card("➕ Add New Card", "", true);
+
+                savedCardComboBox.getItems().add(addNewCard);
+
+                savedCardComboBox.setOnAction(e -> {
+                    Card selectedCard = savedCardComboBox.getValue();
+                    if (selectedCard != null) {
+                        if (selectedCard.isDummyCard()) {  // Check if it's the "Add New Card" option
+                            // Launch new card form
+                            CardPaymentForm cardForm = new CardPaymentForm();
+                            cardForm.showCardPaymentForm(customerID);
+                        } else {
+                            // Prompt confirmation before payment for existing cards
+                            Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                            confirmAlert.setTitle("Confirm Payment");
+                            confirmAlert.setHeaderText("Use saved card ending in " + getLast4Digits(selectedCard.getCardNumber()) + "?");
+                            confirmAlert.setContentText("Do you want to proceed with this card?");
+
+                            Optional<ButtonType> result = confirmAlert.showAndWait();
+                            if (result.isPresent() && result.get() == ButtonType.OK) {
+                                // Proceed to show payment success alert
+                                CardPaymentForm cardForm = new CardPaymentForm();
+                                cardForm.showPaymentSuccessAlert(
+                                    selectedCard.getCardholderName(),
+                                    selectedCard.getCardNumber()
+                                );
+                            }
+                        }
+                    }
+                });
+
+                cardSelectionContainer.getChildren().addAll(selectCardLabel, savedCardComboBox);
+            } else {
+                cardSelectionContainer.getChildren().add(new Label("No saved cards found."));
+
+                // Add fallback "Add New Card" button
+                Button addNewCardBtn = new Button("Add a New Card");
+                addNewCardBtn.setOnAction(ev -> {
+                    CardPaymentForm cardForm = new CardPaymentForm();
+                    cardForm.showCardPaymentForm(customerID);
+                });
+                cardSelectionContainer.getChildren().add(addNewCardBtn);
+            }
+        }
+        
+        //GCASH LOGIC
+       else if ("GCash".equals(newValue)) {
+            // Create and show the GCash Payment Form
+            GCashPaymentForm gcashPaymentForm = new GCashPaymentForm(customerID, addressId, totalPrice);
+            gcashPaymentForm.showGCashPaymentForm();
+        } 
+    });
 
         // Total Labels
         Label subtotalLabel = new Label("Subtotal: ₱" + String.format("%.2f", subtotal));
@@ -277,7 +364,7 @@ public class CheckOutWindow {
         placeOrderBtn.setOnAction(e -> {
             // Ensure address_id is available, assume it's stored in a variable like `addressId`
             if (addressId == -1) {
-                showAlert("Error", "Please save your address first.");
+                showAlert("Error", "Please select an address before placing the order.");
                 return;
             }
 
@@ -295,12 +382,19 @@ public class CheckOutWindow {
 
                 // Show success message
                 showAlert("Success", "Your order has been placed successfully!");
+                
+                // ✅ Clear cart
+                CartSession.clearCart();
+                CartSession.notifyCartChanged(); 
+                
+
+                // ✅ Close the checkout window
+                ((Stage) placeOrderBtn.getScene().getWindow()).close();
+
             } else {
                 showAlert("Error", "Failed to place the order.");
             }
         });
-
-
 
             // Close Button
             Button closeBtn = new Button("Close");
@@ -323,17 +417,48 @@ public class CheckOutWindow {
         leftLayout.getChildren().addAll( addressSection,orderSummary);
 
 
-        mainLayout.getChildren().addAll(progressSection, title, leftLayout,paymentMethodComboBox);
+        mainLayout.getChildren().addAll(progressSection, title, leftLayout,paymentMethodComboBox, cardSelectionContainer);
 
         Scene scene = new Scene(mainLayout, 1200, 700);
         checkoutStage.setScene(scene);
         checkoutStage.setTitle("Cart Summary");
         checkoutStage.showAndWait();
     }
+   
+     private static String getLast4Digits(String cardNumber) {
+        if (cardNumber.length() >= 4) {
+            return cardNumber.substring(cardNumber.length() - 4);
+        }
+        return cardNumber;
+    }
+
     
+    public static List<Card> getSavedCardsForCustomer(int customerID) {
+     List<Card> cards = new ArrayList<>();
+     Connection conn = Database.connect();
+
+     try {
+         PreparedStatement stmt = conn.prepareStatement("SELECT card_number, cardholder_name FROM saved_cards WHERE customer_id = ?");
+         stmt.setInt(1, customerID);
+         ResultSet rs = stmt.executeQuery();
+
+         while (rs.next()) {
+             String number = rs.getString("card_number");
+             String name = rs.getString("cardholder_name");
+             cards.add(new Card(number, name, false));
+         }
+
+     } catch (SQLException e) {
+         e.printStackTrace();
+     }
+
+     return cards;
+ }
+
+   
     // Method to save order items to the database
 
-    private static void saveOrderItemsToDatabase(int orderId) {
+    public static void saveOrderItemsToDatabase(int orderId) {
         Map<Integer, Integer> cartItems = CartSession.getCartItems();
         Map<Integer, String> variations = CartSession.getVariations();
         Map<Integer, String> instructions = CartSession.getInstructions();
@@ -366,43 +491,61 @@ public class CheckOutWindow {
 
 
 
-    // Method to save order to the database
-        private static int saveOrderToDatabase(int customerId, int addressId, double totalPrice, String paymentMethod) {
-         try (Connection conn = Database.connect()) {
-             String sql = "INSERT INTO orders (customer_id, address_id, total_price, payment_method, status) " +
-                          "VALUES (?, ?, ?, ?, 'Pending')";
+    public static int saveOrderToDatabase(int customerId, int addressId, double totalPrice, String paymentMethod) {
+      try (Connection conn = Database.connect()) {
 
-             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-             pstmt.setInt(1, customerId);
-             pstmt.setInt(2, addressId); // Insert the address_id
-             pstmt.setDouble(3, totalPrice);
-             pstmt.setString(4, paymentMethod);
+          // Determine payment_status based on paymentMethod
+          String paymentStatus;
+          switch (paymentMethod) {
+              case "GCash":
+                  paymentStatus = "Pending Verification";
+                  break;
+              case "Credit/Debit Card":
+                  paymentStatus = "Paid";
+                  break;
+              default: // Cash
+                  paymentStatus = "Pending Payment";
+                  break;
+          }
 
-             int affectedRows = pstmt.executeUpdate();
+          // Update query to include payment_status
+          String sql = "INSERT INTO orders (customer_id, address_id, total_price, payment_method, payment_status, status) " +
+                       "VALUES (?, ?, ?, ?, ?, 'Pending')";
 
-             if (affectedRows > 0) {
-                 ResultSet rs = pstmt.getGeneratedKeys();
-                 if (rs.next()) {
-                     return rs.getInt(1); // Return the generated order_id
-                 }
-             }
-         } catch (SQLException ex) {
-             System.err.println("Error saving order: " + ex.getMessage());
-         }
-         return -1; // If order saving failed, return -1
-     }
+          PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+          pstmt.setInt(1, customerId);
+          pstmt.setInt(2, addressId);
+          pstmt.setDouble(3, totalPrice);
+          pstmt.setString(4, paymentMethod);
+          pstmt.setString(5, paymentStatus);
+
+          int affectedRows = pstmt.executeUpdate();
+
+          if (affectedRows > 0) {
+              ResultSet rs = pstmt.getGeneratedKeys();
+              if (rs.next()) {
+                  return rs.getInt(1); // Return the generated order_id
+              }
+          }
+      } catch (SQLException ex) {
+          System.err.println("❌ Error saving order: " + ex.getMessage());
+      }
+      return -1; // If order saving failed
+  }
+
 
 
     private static ObservableList<Address> getCustomerAddresses(int customerId) {
         ObservableList<Address> addresses = FXCollections.observableArrayList();
         try (Connection conn = Database.connect()) {
             // Modified SQL query to include contact_number
-            String sql = "SELECT street, barangay_id, address_type, is_default, contact_number FROM addresses WHERE customer_id = ?";
+            String sql = "SELECT address_id, street, barangay_id, address_type, is_default, contact_number FROM addresses WHERE customer_id = ?";
             PreparedStatement pstmt = conn.prepareStatement(sql);
             pstmt.setInt(1, customerId);
 
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()) {
+                int addressId = rs.getInt("address_id"); // Get the address_id
                 String street = rs.getString("street");
                 int barangayId = rs.getInt("barangay_id");
                 String addressType = rs.getString("address_type");
@@ -410,7 +553,7 @@ public class CheckOutWindow {
                 String contactNumber = rs.getString("contact_number"); // Get contact number
 
                 String barangay = getBarangayNameById(barangayId); // Function to get barangay name by ID
-                addresses.add(new Address(street, barangay, addressType, isDefault, contactNumber)); // Pass contact number to Address constructor
+                addresses.add(new Address(addressId, street, barangay, addressType, isDefault, contactNumber)); // Pass contact number to Address constructor
             }
         } catch (SQLException ex) {
             System.err.println("Error retrieving addresses: " + ex.getMessage());

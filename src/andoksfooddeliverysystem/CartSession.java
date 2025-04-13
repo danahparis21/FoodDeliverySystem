@@ -17,6 +17,7 @@ public class CartSession {
         cart.put(itemId, cart.getOrDefault(itemId, 0) + quantity);
         variationMap.put(itemId, variation);
         instructionsMap.put(itemId, instruction);
+        notifyCartChanged();
     }
 
     
@@ -31,9 +32,18 @@ public class CartSession {
     // Remove item from cart
     public static void removeFromCart(int itemId) {
         cart.remove(itemId);
+        variationMap.remove(itemId);
+        instructionsMap.remove(itemId);
+        notifyCartChanged(); // ✅ important!
     }
 
-    // Get all cart items
+
+    public static int getCartItemCount() {
+        return cart.values().stream().mapToInt(Integer::intValue).sum();
+    }
+
+
+        // Get all cart items
     public static Map<Integer, Integer> getCartItems() {
         return cart;
     }
@@ -55,5 +65,23 @@ public class CartSession {
         variationMap.clear();
         instructionsMap.clear();
     }
+    
+// In CartSession class
+        public interface CartListener {
+            void onCartUpdated(int count);
+        }
+
+        private static CartListener cartListener;
+
+        public static void setCartListener(CartListener listener) {
+            cartListener = listener;
+        }
+
+        public static void notifyCartChanged() {
+            if (cartListener != null) {
+                cartListener.onCartUpdated(getCartItemCount());
+            }
+        }
+
 
 }

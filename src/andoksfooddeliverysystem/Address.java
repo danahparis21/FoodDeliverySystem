@@ -5,13 +5,15 @@
 package andoksfooddeliverysystem;
 
 public class Address {
+    private int addressId;
     private String street;
     private String barangay;
     private String addressType;
     private String contactNumber;
     private boolean isDefault;
 
-    public Address(String street, String barangay, String addressType, boolean isDefault, String contactNumber) {
+    public Address(int addressId, String street, String barangay, String addressType, boolean isDefault, String contactNumber) {
+        this.addressId = addressId;
         this.street = street;
         this.barangay = barangay;
         this.addressType = addressType;
@@ -19,6 +21,11 @@ public class Address {
         this.contactNumber = contactNumber;
     }
 
+    // Getter for addressId
+    public int getAddressId() {
+        return addressId;
+    }
+    
     public String getStreet() {
         return street;
     }

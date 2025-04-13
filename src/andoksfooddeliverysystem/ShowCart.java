@@ -33,6 +33,8 @@ import javafx.util.Duration;
 
 public class ShowCart {
     private static List<String> cartItems = new ArrayList<>(); // Store cart items
+    private static Stage cartStage;
+
 
     public static void addToCart(String item) {
         cartItems.add(item);
@@ -48,7 +50,8 @@ public class ShowCart {
     public static void displayCart(int customerID) {
         System.out.println("✅ Opening Cart for User ID: " + customerID); // Debugging
 
-        Stage cartStage = new Stage();
+        
+        cartStage = new Stage();
         cartStage.initStyle(StageStyle.UTILITY);
         cartStage.initModality(Modality.APPLICATION_MODAL);
         
@@ -170,6 +173,7 @@ public class ShowCart {
                 quantitySpinner.valueProperty().addListener((obs, oldValue, newValue) -> {
                 Platform.runLater(() -> {
                     if (newValue == 0) {
+                          CartSession.removeFromCart(itemId); 
                        removeItem(itemId);
                         itemsBox.getChildren().remove(itemRow);
                     } else {
@@ -277,18 +281,43 @@ public class ShowCart {
         cartStage.showAndWait();
     }
         
-    public static void removeItem(int itemId) {
-        CartSession.getCartItems().remove(itemId);
+        public static void removeItem(int itemId) {
+        CartSession.getCartItems().remove(itemId); // ✅ Removes it from the map
+        CartSession.getVariations().remove(itemId);
+        CartSession.getInstructions().remove(itemId);
+         CartSession.notifyCartChanged(); 
         System.out.println("Item " + itemId + " removed from cart.");
-    }
-    public static void updateItemQuantity(int itemId, int newQuantity) {
-        if (newQuantity > 0) {
-            CartSession.getCartItems().put(itemId, newQuantity);
-            System.out.println("Updated item " + itemId + " to quantity: " + newQuantity);
-        } else {
-            removeItem(itemId);
+        
+         // ✅ Check here instead
+    System.out.println("Cart contents after removal: " + CartSession.getCartItems());
+
+    if (CartSession.getCartItems().isEmpty()) {
+        System.out.println("Cart is empty - switching view...");
+
+        if (cartStage != null && cartStage.isShowing()) {
+            cartStage.close();
         }
+
+        Platform.runLater(() -> {
+            EmptyCart.showEmptyCartMessage();
+        });
+    }
+    }
+
+    
+  
+    public static void updateItemQuantity(int itemId, int newQuantity) {
+    if (newQuantity > 0) {
+        CartSession.getCartItems().put(itemId, newQuantity);
+        CartSession.notifyCartChanged();
+        System.out.println("Updated item " + itemId + " to quantity: " + newQuantity);
+    } else {
+        removeItem(itemId); // this notifies too
+        CartSession.notifyCartChanged(); 
+
+    }
 }
+
 
     private static void updateSubtotal() {
         double newSubtotal = 0.0;

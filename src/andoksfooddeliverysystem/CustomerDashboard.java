@@ -17,12 +17,15 @@ import java.sql.SQLException;
 
 import java.util.List;
 import java.util.Map;
+import javafx.application.Platform;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 public class CustomerDashboard extends Application {
     private int userID;
     private BorderPane mainLayout;
     private VBox sideBar;
     private GridPane menuGrid;
+    private Label cartCountLabel;
     
     // Constructor to receive userID
     public CustomerDashboard(int userID) {
@@ -37,6 +40,9 @@ public class CustomerDashboard extends Application {
         
           // Fetch and display customer details based on userID
         fetchCustomerData(userID);
+        CartSession.setCartListener(count -> updateCartCount(count));
+        updateCartCount(CartSession.getCartItemCount()); // Initial count
+
 
         // 🔝 Top Bar (Search, Notifications, Profile)
         HBox topBar = createTopBar();
@@ -81,10 +87,34 @@ public class CustomerDashboard extends Application {
         searchField.setPromptText("Search menu...");
         searchField.setPrefWidth(200);
         
-        // 🔔 Notification Button
-        Button cartBtn = new Button("🛒");
-        cartBtn.setOnAction(e -> showCart());
+       
+      // Create a more elegant cart button with counter
+            Button cartBtn = new Button();
+            cartBtn.setGraphic(new FontIcon("fas-shopping-cart"));  // Using FontAwesome icon
+            cartBtn.setStyle("-fx-background-color: #f8f9fa; -fx-padding: 5px;");
+            cartBtn.setOnAction(e -> showCart());
 
+            // Create a more refined cart count indicator
+            cartCountLabel = new Label("0");
+            cartCountLabel.setStyle(
+                "-fx-background-color: #e74c3c;" +   // Softer red color
+                "-fx-text-fill: white;" +
+                "-fx-font-size: 10px;" +             // Smaller font
+                "-fx-padding: 1px 4px;" +            // Tighter padding
+                "-fx-background-radius: 10;" +       // Smaller circle
+                "-fx-min-width: 16px;" +             // Consistent width
+                "-fx-alignment: center;" +           // Center text
+                "-fx-font-weight: bold;"             // Bold text for better readability
+            );
+            cartCountLabel.setVisible(false);        // Initially hidden if cart is empty
+
+            // Position the count indicator properly
+            StackPane cartButtonPane = new StackPane();
+            cartButtonPane.getChildren().addAll(cartBtn, cartCountLabel);
+            StackPane.setAlignment(cartCountLabel, Pos.TOP_RIGHT);
+            StackPane.setMargin(cartCountLabel, new Insets(-2, -2, 0, 0));  // Slight adjustment to position
+
+            
         // 🔔 Notification Button
         Button notifBtn = new Button("🔔");
         notifBtn.setOnAction(e -> showNotification());
@@ -93,9 +123,17 @@ public class CustomerDashboard extends Application {
         Button profileBtn = new Button("👤");
         profileBtn.setOnAction(e -> showProfile());
 
-        topBar.getChildren().addAll(searchField, notifBtn, cartBtn, profileBtn);
+        topBar.getChildren().addAll(searchField, notifBtn, cartButtonPane, profileBtn);
         return topBar;
     }
+    
+        public void updateCartCount(int count) {
+        Platform.runLater(() -> {
+            cartCountLabel.setText(String.valueOf(count));
+            cartCountLabel.setVisible(count > 0);
+        });
+}
+
 
    
     
@@ -232,8 +270,17 @@ private void loadCategoryItems(int categoryId) {
     }
     
   
-        private void showCart() {
-            ShowCart.displayCart(userID); // ✅ Pass customerID from logged-in user
+       private void showCart() {
+    if (CartSession.getCartItems().isEmpty()) {
+            showEmptyCartMessage();
+        } else {
+            ShowCart.displayCart(userID);
+        }
+    }
+       
+       private void showEmptyCartMessage() {
+            EmptyCart.showEmptyCartMessage();
+
         }
 
 
