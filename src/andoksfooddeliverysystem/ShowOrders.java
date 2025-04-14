@@ -30,16 +30,14 @@ import javafx.scene.shape.Circle;
 
 public class ShowOrders {
     private VBox root;
-      private Button orderPickedUpButton;
-      private  Button assignToRiderButton;
-      private Button verifyPaymentButton = new Button("Verify Payment");
-
+    
     public ShowOrders() {
         root = new VBox(10); // Adjusted spacing
      
         // Fetch orders from the database
         List<Order> orders = OrderFetcher.fetchOrders();
         
+       
 
         // Create the main container with scroll pane
         ScrollPane scrollPane = new ScrollPane();
@@ -184,12 +182,18 @@ public class ShowOrders {
                 itemBox.getChildren().addAll(itemLabel, detailsBox);
                 orderDetailsBox.getChildren().add(itemBox);
             }
+            
+              // ✅ These should be local per order
+            final Button assignToRiderButton = new Button("Assign to Rider");
+            final Button orderPickedUpButton = new Button("Order Picked Up");
+            final Button verifyPaymentButton = new Button("Verify Payment");
 
-               orderPickedUpButton = new Button("Order Picked Up");
+
+            
             orderPickedUpButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
             orderPickedUpButton.setDisable(true); // Initially disabled
 
-             assignToRiderButton = new Button("Assign to Rider");
+        
             assignToRiderButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
 
           
@@ -226,17 +230,30 @@ public class ShowOrders {
                 ordersContainer.getChildren().add(orderBox);
             });
             
-              if ("pending verification".equalsIgnoreCase(paymentStatus)) {
-                 verifyPaymentButton = new Button("Verify Payment");
+             System.out.println("Checking order " + order.getOrderId());
+            System.out.println("Payment Status: " + order.getPaymentStatus());
+            System.out.println("Order Status: " + order.getOrderStatus());
+
+            if ("pending verification".equalsIgnoreCase(order.getPaymentStatus())
+                && !"cancelled".equalsIgnoreCase(order.getOrderStatus())
+                && !"completed".equalsIgnoreCase(order.getOrderStatus())) {
+
+               
                 mainContent.getChildren().add(verifyPaymentButton);
 
-            verifyPaymentButton.setOnAction(e -> {
-               PaymentVerificationWindow.show(order, paymentStatusLabel, orderBox, ordersContainer, statusLabel, statusCircle,
-                               verifyPaymentButton, assignToRiderButton, orderPickedUpButton);
+                verifyPaymentButton.setOnAction(e -> {
+                    PaymentVerificationWindow.show(
+                        order, paymentStatusLabel, orderBox, ordersContainer,
+                        statusLabel, statusCircle,
+                        verifyPaymentButton, assignToRiderButton, orderPickedUpButton
+                    );
+                });
 
-           });
-        }
-              if ("completed".equalsIgnoreCase(order.getOrderStatus()) || 
+            } else {
+                System.out.println("Button should be disabled or not shown.");
+            }
+
+                          if ("completed".equalsIgnoreCase(order.getOrderStatus()) || 
             "cancelled".equalsIgnoreCase(order.getOrderStatus())) {
 
             verifyPaymentButton.setDisable(true);

@@ -55,8 +55,10 @@ public class PaymentVerificationWindow {
     });
 
     declineBtn.setOnAction(de -> {
+        
         updatePaymentStatus(order.getOrderId(), "Payment Declined");
          updateOrderStatus(order.getOrderId(), "Cancelled");
+         
 
         order.setPaymentStatus("Payment Declined");
         
