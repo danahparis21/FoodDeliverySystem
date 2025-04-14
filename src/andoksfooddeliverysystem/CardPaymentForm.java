@@ -33,7 +33,13 @@ import javafx.stage.*;
 import javafx.util.Duration;
 
 public class CardPaymentForm {
+     private Runnable onPaymentSuccess;
 
+
+    public void setOnPaymentSuccess(Runnable callback) {
+    this.onPaymentSuccess = callback;
+}
+    
     public void showCardPaymentForm(int customerId) {
     Stage cardStage = new Stage();
     cardStage.initStyle(StageStyle.UNDECORATED);
@@ -314,6 +320,8 @@ public class CardPaymentForm {
             });
             errorPause.play();
         }
+        
+           
     });
     
     // Add secure payment message
@@ -380,6 +388,8 @@ public class CardPaymentForm {
     scaleIn.setToX(1.0);
     scaleIn.setToY(1.0);
     scaleIn.setInterpolator(Interpolator.EASE_OUT);
+       
+
     
     ParallelTransition parallelTransition = new ParallelTransition(fadeIn, scaleIn);
     parallelTransition.play();
@@ -469,9 +479,12 @@ private static class Delta {
     
     // Create and show beautiful alert dialog
     showPaymentSuccessAlert(cardholderName, cardNumber);
+    
 }
 
 public void showPaymentSuccessAlert(String cardholderName, String cardNumber) {
+    
+         
     // Create a custom alert stage
     Stage alertStage = new Stage();
     alertStage.initStyle(StageStyle.TRANSPARENT);
@@ -643,9 +656,16 @@ public void showPaymentSuccessAlert(String cardholderName, String cardNumber) {
        sequence.setOnFinished(event -> {
         Platform.runLater(() -> {
             alertStage.showAndWait();
+            
+            if (onPaymentSuccess != null) {
+                onPaymentSuccess.run();
+            }
         });
     });
     sequence.play();
+    
+    
+   
 
 
 }

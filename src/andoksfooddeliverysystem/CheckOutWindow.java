@@ -5,7 +5,15 @@
 package andoksfooddeliverysystem;
 
 
+import java.awt.Desktop;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -52,6 +60,18 @@ public class CheckOutWindow {
      private static double totalPrice;
 
      static double subtotal = 0;
+     static ComboBox<Card> savedCardComboBox = new ComboBox<>();
+     static ComboBox<String> pickupTimeCombo;
+     static ComboBox<String> paymentMethodComboBox = new ComboBox<>();
+     
+   
+
+        static {
+            pickupTimeCombo = new ComboBox<>();
+            pickupTimeCombo.setPromptText("Select Pickup Time");
+        }
+
+
 
    public static void displayCheckout(int customerID, Map<Integer, Integer> cartItems, Map<Integer, String> variations, Map<Integer, String> instructions) {
           System.out.println("✅ Checkout opened for User ID: " + customerID); // Debugging
@@ -118,10 +138,15 @@ public class CheckOutWindow {
         addressSection.setStyle("-fx-border-color: gray; -fx-border-radius: 10; -fx-padding: 10;");
 
         // Address fields
-        Label addressLabel = new Label("Enter Shipping Address:");
+        ComboBox<String> deliveryTypeCombo = new ComboBox<>();
+        deliveryTypeCombo.getItems().addAll("Delivery", "For Pick Up");
+        deliveryTypeCombo.setValue("Enter Shipping Address (Delivery)");
         
-        //BArrangay
-         
+        
+        // === DELIVERY SECTION ===
+        VBox deliverySection = new VBox(10);
+     
+       
         ComboBox<String> barangayCombo = new ComboBox<>();
         barangayCombo.getItems().addAll(getBarangays()); // Get barangays from the database
         barangayCombo.getSelectionModel().selectFirst();
@@ -189,11 +214,8 @@ public class CheckOutWindow {
         addressListView.setItems(getCustomerAddresses(customerID)); // Load customer addresses
 
         // Make the list scrollable
-        addressListView.setPrefHeight(100);  // Adjust height as needed
+       addressListView.setPrefHeight(100); // or even 200
 
-        // Track selected address's ID
-    
-        // When an address is selected, populate the fields
         addressListView.setOnMouseClicked(event -> {
                  selectedAddress = addressListView.getSelectionModel().getSelectedItem();
             if (selectedAddress != null) {
@@ -207,32 +229,132 @@ public class CheckOutWindow {
             }
         });
 
-        // Add components to layout
-        addressSection.getChildren().addAll(
-            addressLabel,
-            barangayCombo, // Add Barangay combo box
+//       
+
+        deliverySection.getChildren().addAll(
+            
+            barangayCombo,
             streetField,
-             contactNumberField, // Add Contact Number field
+            contactNumberField,
             new Label("Address Type:"),
             typeCombo,
             defaultCheck,
             saveButton,
+            new Label("Saved Addresses:"),
             addressListView
         );
-        addressSection.setPrefWidth(800);
+        deliverySection.setPrefWidth(800);
         
-        // Step 3: Create Payment Method Section (ComboBox)
-        Label paymentMethodLabel = new Label("Select Payment Method:");
-        ComboBox<String> paymentMethodComboBox = new ComboBox<>();
-        paymentMethodComboBox.getItems().addAll("Cash", "Credit/Debit Card", "GCash");
-        paymentMethodComboBox.setValue("Cash"); // Set default payment option
         
+     
+        // === PICKUP SECTION ===
+        VBox pickupSection = new VBox(10);
+        pickupSection.setVisible(false);
+        pickupSection.setPrefWidth(800);
+        
+        Label pickupLabel = new Label("Schedule Pickup Time:");
+
+       DatePicker pickupDatePicker = new DatePicker();
+        pickupDatePicker.setDayCellFactory(picker -> new DateCell() {
+            @Override
+            public void updateItem(LocalDate date, boolean empty) {
+                super.updateItem(date, empty);
+                // Disable everything except today
+                setDisable(empty || !date.equals(LocalDate.now()));
+            }
+        });
+        pickupDatePicker.setValue(LocalDate.now());
+
+        
+        // ⏰ Replace TextField with ComboBox for time
+        pickupTimeCombo.setPromptText("Select Pickup Time");
+        
+        pickupDatePicker.setOnAction(e -> {
+            LocalDate selectedDate = pickupDatePicker.getValue();
+            if (selectedDate != null) {
+                updateTimeSlots(selectedDate);
+            }
+        });
+
+       
+       // ✅ Also call once on load to populate time slots for today
+        updateTimeSlots(LocalDate.now());
+        Label pickupAddress = new Label("Pickup Address: Andok’s, Nasugbu, Batangas");
+
+        // Track button
+        Button trackButton = new Button("Track Location");
+            trackButton.setOnAction(e -> {
+        try {
+            String coordinates = "14.072501,120.632110";
+            String url = "https://www.google.com/maps/search/?api=1&query=" + URLEncoder.encode(coordinates, StandardCharsets.UTF_8);
+            Desktop.getDesktop().browse(new URI(url));
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    });
+
+
+        pickupSection.getChildren().addAll(
+        pickupLabel,
+         new Label("Pickup Date:"), pickupDatePicker,
+        new Label("Pickup Time:"), pickupTimeCombo,
+        pickupAddress,
+        trackButton
+    );
+
+        // Create a StackPane to hold both delivery and pickup sections
+        StackPane addressModePane = new StackPane();
+        addressModePane.getChildren().addAll(deliverySection, pickupSection);
+
+        // Set only one visible at a time
+        pickupSection.setVisible(false); // Start with delivery visible
+        deliverySection.setVisible(true);
+
+        
+        //PAYMENT
+           paymentMethodComboBox.getItems().clear();
+           Label paymentMethodLabel = new Label("Select Payment Method:");
+        
+     
+           
+
+        // === TOGGLE BETWEEN DELIVERY & PICKUP ===
+             
+         deliveryTypeCombo.setOnAction(e -> {
+             boolean isPickup = deliveryTypeCombo.getValue().equals("For Pick Up");
+             deliverySection.setVisible(!isPickup);
+             pickupSection.setVisible(isPickup);
+
+             // 🔁 Update payment methods based on order type
+             paymentMethodComboBox.getItems().clear();
+
+             if (isPickup) {
+                 // Only show prepaid options for pickup
+                 paymentMethodComboBox.getItems().addAll("Credit/Debit Card", "GCash");
+                 paymentMethodComboBox.setValue("Credit/Debit Card"); // set default for pickup
+                  showInfo("Only prepaid methods (Card or GCash) are allowed for pickup orders.");
+
+             } else {
+                 // Show all options including Cash for delivery
+                 paymentMethodComboBox.getItems().addAll("Cash", "Credit/Debit Card", "GCash");
+                 paymentMethodComboBox.setValue("Cash"); // set default for delivery
+             }
+         });
+
+
+        addressSection.getChildren().addAll(
+        new Label("Choose Delivery Method:"),
+        deliveryTypeCombo,
+        addressModePane
+    );
+    addressSection.setPrefHeight(400);
+    
+       
+
+   //Card payment
         VBox cardSelectionContainer = new VBox();
         
         VBox paymentSelectionContainer = new VBox();
-
-
-        
 
 
         // Order Summary Box
@@ -246,8 +368,6 @@ public class CheckOutWindow {
          for (Map.Entry<Integer, Integer> entry : cartItems.entrySet()) {
             int itemId = entry.getKey();
             int quantity = entry.getValue();
-            
-            
 
             String variationText = variations.getOrDefault(itemId, "No variation");
             String instructionsText = instructions.getOrDefault(itemId, "No instructions");
@@ -293,65 +413,44 @@ public class CheckOutWindow {
         if ("Credit/Debit Card".equals(newValue)) {
             List<Card> savedCards = getSavedCardsForCustomer(customerID); // Your DB method
 
-            if (!savedCards.isEmpty()) {
-                Label selectCardLabel = new Label("Select Saved Card:");
-                ComboBox<Card> savedCardComboBox = new ComboBox<>();
-                savedCardComboBox.setPromptText("Choose a saved card");
+             
+           if (!savedCards.isEmpty()) {
+            // Clear previous contents first to avoid duplicates
+            savedCardComboBox.getItems().clear();
+            cardSelectionContainer.getChildren().clear();
 
-                // Add saved cards to the combo box
-                savedCardComboBox.getItems().addAll(savedCards);
+            Label selectCardLabel = new Label("Select Saved Card:");
+            savedCardComboBox.setPromptText("Choose a saved card");
 
-                // Add a "dummy" card item for adding a new card
-                Card addNewCard = new Card("➕ Add New Card", "", true);
+            // Add saved cards to the combo box
+            savedCardComboBox.getItems().addAll(savedCards);
 
-                savedCardComboBox.getItems().add(addNewCard);
+            // Add the dummy "Add New Card" option at the end
+            Card addNewCard = new Card("➕ Add New Card", "", true);
+            savedCardComboBox.getItems().add(addNewCard);
 
-                savedCardComboBox.setOnAction(e -> {
-                    Card selectedCard = savedCardComboBox.getValue();
-                    if (selectedCard != null) {
-                        if (selectedCard.isDummyCard()) {  // Check if it's the "Add New Card" option
-                            // Launch new card form
-                            CardPaymentForm cardForm = new CardPaymentForm();
-                            cardForm.showCardPaymentForm(customerID);
-                        } else {
-                            // Prompt confirmation before payment for existing cards
-                            Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
-                            confirmAlert.setTitle("Confirm Payment");
-                            confirmAlert.setHeaderText("Use saved card ending in " + getLast4Digits(selectedCard.getCardNumber()) + "?");
-                            confirmAlert.setContentText("Do you want to proceed with this card?");
+            cardSelectionContainer.getChildren().addAll(selectCardLabel, savedCardComboBox);
+        } else {
+            // Clear previous content first
+            cardSelectionContainer.getChildren().clear();
 
-                            Optional<ButtonType> result = confirmAlert.showAndWait();
-                            if (result.isPresent() && result.get() == ButtonType.OK) {
-                                // Proceed to show payment success alert
-                                CardPaymentForm cardForm = new CardPaymentForm();
-                                cardForm.showPaymentSuccessAlert(
-                                    selectedCard.getCardholderName(),
-                                    selectedCard.getCardNumber()
-                                );
-                            }
-                        }
-                    }
-                });
+            cardSelectionContainer.getChildren().add(new Label("No saved cards found."));
 
-                cardSelectionContainer.getChildren().addAll(selectCardLabel, savedCardComboBox);
-            } else {
-                cardSelectionContainer.getChildren().add(new Label("No saved cards found."));
-
-                // Add fallback "Add New Card" button
-                Button addNewCardBtn = new Button("Add a New Card");
-                addNewCardBtn.setOnAction(ev -> {
-                    CardPaymentForm cardForm = new CardPaymentForm();
-                    cardForm.showCardPaymentForm(customerID);
-                });
-                cardSelectionContainer.getChildren().add(addNewCardBtn);
-            }
+            // Add fallback "Add New Card" button
+            Button addNewCardBtn = new Button("Add a New Card");
+            addNewCardBtn.setOnAction(ev -> {
+                savedCardComboBox.setValue(new Card("➕ Add New Card", "", true));
+                
+            });
+            cardSelectionContainer.getChildren().add(addNewCardBtn);
         }
+        }
+
         
         //GCASH LOGIC
        else if ("GCash".equals(newValue)) {
-            // Create and show the GCash Payment Form
-            GCashPaymentForm gcashPaymentForm = new GCashPaymentForm(customerID, addressId, totalPrice);
-            gcashPaymentForm.showGCashPaymentForm();
+           
+              System.out.println("Switched to GCash Payment");
         } 
     });
 
@@ -362,40 +461,130 @@ public class CheckOutWindow {
         
         Button placeOrderBtn = new Button("Place Order");
         placeOrderBtn.setOnAction(e -> {
-            // Ensure address_id is available, assume it's stored in a variable like `addressId`
-            if (addressId == -1) {
+            // Determine the effective addressId to use based on delivery type
+            int effectiveAddressId = deliveryTypeCombo.getValue().equals("For Pick Up") ? 8 : addressId;
+
+            // If it's not a pickup, ensure an address has been selected
+            if (!deliveryTypeCombo.getValue().equals("For Pick Up") && addressId == -1) {
                 showAlert("Error", "Please select an address before placing the order.");
+                totalPrice = subtotal + 49.00;  // Adding delivery fee
                 return;
             }
 
             String paymentMethod = paymentMethodComboBox.getSelectionModel().getSelectedItem() != null 
                                     ? paymentMethodComboBox.getSelectionModel().getSelectedItem() 
-                                    : "COD"; // Default to "COD" if nothing is selected
+                                    : "Cash"; // Default to "COD" if nothing is selected
 
-            double totalPrice = subtotal + 49.00;  // Adding delivery fee
+            boolean isPickup = deliveryTypeCombo.getValue().equals("For Pick Up");
+            String orderType = isPickup ? "Pick Up" : "Delivery";
+            String pickupTime = isPickup ? pickupTimeCombo.getValue() : null;
 
-            // Save the order using the address_id
-            int orderId = saveOrderToDatabase(customerID, addressId, totalPrice, paymentMethod);
-            if (orderId != -1) {
-                // If order is saved successfully, save the order items
-                saveOrderItemsToDatabase(orderId);
+             // Card selection validation
+            if ("Credit/Debit Card".equals(paymentMethod)) {
+                Card selectedCard = savedCardComboBox.getValue();
+                if (selectedCard == null) {
+                    showAlert("Error", "Please select a card for payment.");
+                    return;
+                }
 
-                // Show success message
-                showAlert("Success", "Your order has been placed successfully!");
-                
-                // ✅ Clear cart
-                CartSession.clearCart();
-                CartSession.notifyCartChanged(); 
-                
+            if (selectedCard.isDummyCard()) {
+                // 👇 Delay order saving until card payment is done
+                CardPaymentForm cardForm = new CardPaymentForm();
+                cardForm.setOnPaymentSuccess(() -> {
+                   
+                int orderId = saveOrderToDatabase(customerID, effectiveAddressId, totalPrice, paymentMethod, orderType, pickupTime);
 
-                // ✅ Close the checkout window
-                ((Stage) placeOrderBtn.getScene().getWindow()).close();
-
+                     if (orderId != -1) {
+                        saveOrderItemsToDatabase(orderId);
+//                        showAlert("Success", "Your order has been placed successfully!");
+                        CartSession.clearCart();
+                        CartSession.notifyCartChanged();
+                        ((Stage) placeOrderBtn.getScene().getWindow()).close();
+                    } else {
+                        showAlert("Error", "Failed to place the order.");
+                    }
+                });
+                cardForm.showCardPaymentForm(customerID);
+                return; // Don't continue until payment is complete
             } else {
-                showAlert("Error", "Failed to place the order.");
-            }
-        });
+                // Saved card: confirm then process
+                Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                confirmAlert.setTitle("Confirm Payment");
+                confirmAlert.setHeaderText("Use saved card ending in " + getLast4Digits(selectedCard.getCardNumber()) + "?");
+                confirmAlert.setContentText("Do you want to proceed with this card?");
 
+                Optional<ButtonType> result = confirmAlert.showAndWait();
+                if (result.isPresent() && result.get() == ButtonType.OK) {
+                    // Simulate payment success
+                    CardPaymentForm cardForm = new CardPaymentForm();
+                    cardForm.showPaymentSuccessAlert(
+                        selectedCard.getCardholderName(),
+                        selectedCard.getCardNumber()
+                    );
+
+                     // ✅ Now place the order
+                    
+                int orderId = saveOrderToDatabase(customerID, effectiveAddressId, totalPrice, paymentMethod, orderType, pickupTime);
+                if (orderId != -1) {
+                        saveOrderItemsToDatabase(orderId);
+                        showAlert("Success", "Your order has been placed successfully!");
+                        CartSession.clearCart();
+                        CartSession.notifyCartChanged();
+                        ((Stage) placeOrderBtn.getScene().getWindow()).close();
+                    } else {
+                        showAlert("Error", "Failed to place the order.");
+                    }
+                }
+                return;
+            }
+        }
+        if ("GCash".equals(paymentMethod)) {
+            GCashPaymentForm gcashForm = new GCashPaymentForm(customerID, addressId, totalPrice);
+            gcashForm.setOnPaymentSuccess(() -> {
+                   String proofPath = gcashForm.getProofFilePath(); // ← get the proof path from GCash form
+
+            // Save the order with effective addressId for pickup or selected address for delivery
+             int orderId = saveOrderToDatabase(customerID, effectiveAddressId, totalPrice, paymentMethod, orderType, pickupTime);
+            
+            if (orderId != -1) {
+                    gcashForm.saveProofOfPayment(orderId, proofPath);
+                    saveOrderItemsToDatabase(orderId);
+                    
+                  
+                    CartSession.clearCart();
+                    CartSession.notifyCartChanged();
+                    ((Stage) placeOrderBtn.getScene().getWindow()).close();
+                    
+                     // Use PauseTransition to add delay before showing the alert
+                PauseTransition pause = new PauseTransition(Duration.seconds(1)); // Adjust delay if needed
+                pause.setOnFinished(event -> {
+                    gcashForm.showVerificationPendingAlert(orderId);  // Show the alert after the delay
+                });
+                pause.play();
+                } else {
+                    showAlert("Error", "Failed to place the order.");
+                }
+            });
+            gcashForm.showGCashPaymentForm();
+            return;
+        }
+
+        // COD: direct order placement
+        
+        int orderId = saveOrderToDatabase(customerID, effectiveAddressId, totalPrice, paymentMethod, orderType, pickupTime);
+
+        if (orderId != -1) {
+            saveOrderItemsToDatabase(orderId);
+            showAlert("Success", "Your order has been placed successfully!");
+            CartSession.clearCart();
+            CartSession.notifyCartChanged();
+            ((Stage) placeOrderBtn.getScene().getWindow()).close();
+        } else {
+            showAlert("Error", "Failed to place the order.");
+        }
+    });
+
+          
             // Close Button
             Button closeBtn = new Button("Close");
             closeBtn.setOnAction(e -> checkoutStage.close());
@@ -417,13 +606,58 @@ public class CheckOutWindow {
         leftLayout.getChildren().addAll( addressSection,orderSummary);
 
 
-        mainLayout.getChildren().addAll(progressSection, title, leftLayout,paymentMethodComboBox, cardSelectionContainer);
+        mainLayout.getChildren().addAll(progressSection, title, leftLayout,paymentMethodLabel,paymentMethodComboBox, cardSelectionContainer);
 
         Scene scene = new Scene(mainLayout, 1200, 700);
         checkoutStage.setScene(scene);
         checkoutStage.setTitle("Cart Summary");
         checkoutStage.showAndWait();
     }
+   
+  
+
+   
+    private static void updateTimeSlots(LocalDate selectedDate) {
+      pickupTimeCombo.getItems().clear();
+
+      // Time slots in 24-hour (military) format
+      String[] timeSlots = {
+          "08:00 - 09:00", "09:00 - 10:00", "10:00 - 11:00", "11:00 - 12:00",
+          "12:00 - 13:00", "13:00 - 14:00", "14:00 - 15:00", "15:00 - 16:00",
+          "16:00 - 17:00", "17:00 - 18:00", "18:00 - 19:00", "19:00 - 20:00"
+      };
+
+      DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm"); // 24-hour
+
+      if (selectedDate.equals(LocalDate.now())) {
+          LocalTime now = LocalTime.now();
+
+          for (String slot : timeSlots) {
+              String startTimeStr = slot.split(" - ")[0]; // e.g. "15:00"
+
+              try {
+                  LocalTime startTime = LocalTime.parse(startTimeStr, formatter);
+                  if (startTime.isAfter(now)) {
+                      pickupTimeCombo.getItems().add(slot);
+                  }
+              } catch (DateTimeParseException e) {
+                  System.err.println("Failed to parse time slot: " + startTimeStr);
+              }
+          }
+
+          if (pickupTimeCombo.getItems().isEmpty()) {
+              pickupTimeCombo.getItems().add("No available time slots");
+          }
+
+      } else {
+          pickupTimeCombo.getItems().add("No available slots for future dates");
+      }
+
+      pickupTimeCombo.getSelectionModel().clearSelection();
+  }
+
+
+
    
      private static String getLast4Digits(String cardNumber) {
         if (cardNumber.length() >= 4) {
@@ -491,47 +725,56 @@ public class CheckOutWindow {
 
 
 
-    public static int saveOrderToDatabase(int customerId, int addressId, double totalPrice, String paymentMethod) {
-      try (Connection conn = Database.connect()) {
+    public static int saveOrderToDatabase(int customerId, int addressId, double totalPrice, String paymentMethod, String orderType, String pickupTime) {
+     try (Connection conn = Database.connect()) {
 
-          // Determine payment_status based on paymentMethod
-          String paymentStatus;
-          switch (paymentMethod) {
-              case "GCash":
-                  paymentStatus = "Pending Verification";
-                  break;
-              case "Credit/Debit Card":
-                  paymentStatus = "Paid";
-                  break;
-              default: // Cash
-                  paymentStatus = "Pending Payment";
-                  break;
-          }
+         // Determine payment_status based on paymentMethod
+         String paymentStatus;
+         switch (paymentMethod) {
+             case "GCash":
+                 paymentStatus = "Pending Verification";
+                 break;
+             case "Credit/Debit Card":
+                 paymentStatus = "Paid";
+                 break;
+             default: // Cash
+                 paymentStatus = "Pending Payment";
+                 break;
+         }
 
-          // Update query to include payment_status
-          String sql = "INSERT INTO orders (customer_id, address_id, total_price, payment_method, payment_status, status) " +
-                       "VALUES (?, ?, ?, ?, ?, 'Pending')";
+         // Build the SQL query
+         String sql = "INSERT INTO orders (customer_id, address_id, total_price, payment_method, payment_status, status, order_type, pickup_time) " +
+                      "VALUES (?, ?, ?, ?, ?, 'Pending', ?, ?)";
 
-          PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-          pstmt.setInt(1, customerId);
-          pstmt.setInt(2, addressId);
-          pstmt.setDouble(3, totalPrice);
-          pstmt.setString(4, paymentMethod);
-          pstmt.setString(5, paymentStatus);
+         // Prepare statement and set parameters
+         PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+         pstmt.setInt(1, customerId);
+         pstmt.setInt(2, addressId);
+         pstmt.setDouble(3, totalPrice);
+         pstmt.setString(4, paymentMethod);
+         pstmt.setString(5, paymentStatus);
+         pstmt.setString(6, orderType); // 'Pick Up' or 'Delivery'
 
-          int affectedRows = pstmt.executeUpdate();
+         if ("Pick Up".equals(orderType)) {
+             pstmt.setString(7, pickupTime);  // If it's a pickup, set pickup time
+         } else {
+             pstmt.setNull(7, java.sql.Types.NULL); // If it's delivery, set pickup time as NULL
+         }
 
-          if (affectedRows > 0) {
-              ResultSet rs = pstmt.getGeneratedKeys();
-              if (rs.next()) {
-                  return rs.getInt(1); // Return the generated order_id
-              }
-          }
-      } catch (SQLException ex) {
-          System.err.println("❌ Error saving order: " + ex.getMessage());
-      }
-      return -1; // If order saving failed
-  }
+         // Execute the update and get the generated order_id
+         int affectedRows = pstmt.executeUpdate();
+
+         if (affectedRows > 0) {
+             ResultSet rs = pstmt.getGeneratedKeys();
+             if (rs.next()) {
+                 return rs.getInt(1); // Return the generated order_id
+             }
+         }
+     } catch (SQLException ex) {
+         System.err.println("❌ Error saving order: " + ex.getMessage());
+     }
+     return -1; // If order saving failed
+ }
 
 
 
@@ -606,6 +849,14 @@ private static void showAlert(String title, String message) {
     alert.showAndWait();
 }
         
+ public static void showInfo(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Information");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+ 
     public static void removeItem(int itemId) {
         CartSession.getCartItems().remove(itemId);
         System.out.println("Item " + itemId + " removed from cart.");

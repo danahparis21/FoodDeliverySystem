@@ -28,6 +28,7 @@ import javafx.scene.text.*;
 import javafx.stage.*;
 import javafx.util.Duration;
 import java.io.File;
+import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
@@ -41,11 +42,21 @@ public class GCashPaymentForm {
     private int addressId;
     private double totalPrice;
       private Button processPaymentBtn;
+    private Runnable onPaymentSuccess;
+    private String proofFilePath;
+    
+    public String getProofFilePath() {
+        return proofFilePath;
+    }
 
     public GCashPaymentForm(int customerID, int addressId, double totalPrice) {
         this.customerID = customerID;
         this.addressId = addressId;
         this.totalPrice = totalPrice;
+    }
+    
+        public void setOnPaymentSuccess(Runnable callback) {
+        this.onPaymentSuccess = callback;
     }
 
     public void showGCashPaymentForm() {
@@ -61,7 +72,7 @@ public class GCashPaymentForm {
     // Modern card container
     VBox cardContainer = new VBox(20);
     cardContainer.setMaxWidth(550);
-    cardContainer.setMaxHeight(750);
+    cardContainer.setMaxHeight(600);
     cardContainer.setPadding(new Insets(30));
     cardContainer.setStyle("-fx-background-color: white; " +
                           "-fx-background-radius: 15px; " +
@@ -71,7 +82,7 @@ public class GCashPaymentForm {
     // Header with GCash logo and close button
     HBox header = new HBox();
     header.setAlignment(Pos.CENTER_LEFT);
-    header.setPadding(new Insets(0, 0, 15, 0));
+    header.setPadding(new Insets(20, 0, 15, 0));
     
     // GCash logo
     HBox logoBox = new HBox(10);
@@ -287,12 +298,23 @@ public class GCashPaymentForm {
     });
     
     processPaymentBtn.setOnAction(e -> {
+        
         String proofFilePath = (String) proofFilePathField.getUserData();
         if (proofFilePath == null || proofFilePath.isEmpty()) {
             showAlert("Error", "Please upload proof of payment.");
             return;
         }
+     
+        proofFilePath = (String) proofFilePathField.getUserData();
+        if (proofFilePath == null || proofFilePath.isEmpty()) {
+            showAlert("Error", "Please upload proof of payment.");
+            return;
+        }
         
+          if (onPaymentSuccess != null) {
+                onPaymentSuccess.run();
+            }
+
         // Show processing animation
         ProgressIndicator progress = new ProgressIndicator();
         progress.setStyle("-fx-progress-color: white;");
@@ -303,11 +325,6 @@ public class GCashPaymentForm {
         // Simulate processing
         PauseTransition pause = new PauseTransition(Duration.seconds(1.5));
         pause.setOnFinished(event -> {
-            // Save the order to the database with Pending Verification status
-            int orderId = CheckOutWindow.saveOrderToDatabase(customerID, addressId, totalPrice, "GCash");
-            if (orderId != -1) {
-                // Save the proof of payment image path
-                saveProofOfPayment(orderId, proofFilePath);
                 
                 // Close GCash window
                 FadeTransition fadeOut = new FadeTransition(Duration.millis(300), root);
@@ -315,16 +332,10 @@ public class GCashPaymentForm {
                 fadeOut.setToValue(0.0);
                 fadeOut.setOnFinished(evt -> {
                     gcashStage.close();
-                    
-                    // Show verification pending alert
-                    showVerificationPendingAlert(orderId);
+                  
                 });
                 fadeOut.play();
-            } else {
-                showAlert("Error", "Failed to place the order.");
-                processPaymentBtn.setGraphic(null);
-                processPaymentBtn.setText("Process GCash Payment");
-            }
+            
         });
         pause.play();
     });
@@ -353,8 +364,19 @@ public class GCashPaymentForm {
         gcashStage.setY(mouseEvent.getScreenY() + dragDelta.y);
     });
     
+    // 1. Wrap your card container inside a ScrollPane
+        ScrollPane scrollPane = new ScrollPane(cardContainer);
+        scrollPane.setFitToWidth(true); // makes it stretch to fit width
+        scrollPane.setStyle("-fx-background-color: transparent;");
+
+        // Optional: remove scrollbars if not needed unless overflow
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+
+        root.getChildren().add(scrollPane);  // Add the scrollable cardContainer
+        root.setStyle("-fx-background-color: transparent;");
     // Set up scene
-    Scene scene = new Scene(root, 600, 800);
+    Scene scene = new Scene(root, 550, 800);
     scene.setFill(Color.TRANSPARENT);
     gcashStage.initStyle(StageStyle.TRANSPARENT);
     gcashStage.setScene(scene);
@@ -395,7 +417,7 @@ private StackPane createStepCircle(String number, boolean active) {
 }
 
 // Method to show verification pending alert
-private void showVerificationPendingAlert(int orderId) {
+public void showVerificationPendingAlert(int orderId) {
     // Create a new stage for the alert
     Stage alertStage = new Stage();
     alertStage.initStyle(StageStyle.TRANSPARENT);
@@ -438,7 +460,7 @@ private void showVerificationPendingAlert(int orderId) {
     Label messageLabel2 = new Label("Your payment is being verified by our team.");
     messageLabel2.setStyle("-fx-font-size: 14px; -fx-text-fill: #757575;");
     
-    Label messageLabel3 = new Label("This usually takes less than 30 minutes.");
+    Label messageLabel3 = new Label("This usually takes less than 10 minutes.");
     messageLabel3.setStyle("-fx-font-size: 14px; -fx-text-fill: #757575;");
     
     messageBox.getChildren().addAll(messageLabel1, messageLabel2, messageLabel3);
@@ -502,7 +524,7 @@ private void showVerificationPendingAlert(int orderId) {
     root.getChildren().add(alertBox);
     
     // Set up scene
-    Scene scene = new Scene(root, 500, 500);
+    Scene scene = new Scene(root, 450, 500);
     scene.setFill(Color.TRANSPARENT);
     alertStage.setScene(scene);
     
@@ -533,10 +555,18 @@ private void showVerificationPendingAlert(int orderId) {
     
     // Play animations
     ParallelTransition parallelTransition = new ParallelTransition(fadeIn, scaleIn);
-    parallelTransition.setOnFinished(e -> pulse.play());
+      parallelTransition.setOnFinished(e -> {
+    // Run this on the JavaFX thread after animation/layout
+        Platform.runLater(() -> {
+            alertStage.showAndWait(); // This will block until alert is closed
+
+        });
+    });
+
+
     parallelTransition.play();
     
-    alertStage.showAndWait();
+    
 }
 
 // Helper class for window dragging
@@ -552,7 +582,7 @@ private static class Delta {
     }
 
    
-        private static void saveProofOfPayment(int orderId, String proofFilePath) {
+        public static void saveProofOfPayment(int orderId, String proofFilePath) {
         try (Connection conn = Database.connect()) {
             String sql = "UPDATE orders SET payment_proof_path = ? WHERE order_id = ?";
             PreparedStatement pstmt = conn.prepareStatement(sql);
