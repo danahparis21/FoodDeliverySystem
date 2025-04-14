@@ -13,7 +13,7 @@ public class OrderFetcher {
         List<Order> orders = new ArrayList<>();
         
         // SQL query to fetch orders and their associated address information
-        String orderQuery = "SELECT o.order_id, o.total_price, o.order_date, o.status, o.proof_of_delivery_image_path, a.street, b.barangay_name, a.contact_number " +
+        String orderQuery = "SELECT o.*, a.street, b.barangay_name, a.contact_number " +
                             "FROM orders o " +
                             "JOIN addresses a ON o.address_id = a.address_id " +
                             "JOIN barangay b ON a.barangay_id = b.barangay_id"; // Fetch order and address details
@@ -37,6 +37,12 @@ public class OrderFetcher {
                 String contactNumber = orderResultSet.getString("contact_number");
                 String orderStatus = orderResultSet.getString("status");
                 String imagePath = orderResultSet.getString("proof_of_delivery_image_path");
+                String orderType = orderResultSet.getString("order_type");
+                String paymentMethod = orderResultSet.getString("payment_method");
+                String paymentStatus = orderResultSet.getString("payment_status");
+                String pickupTime = orderResultSet.getString("pickup_time");
+                String proofOfPaymentImage = orderResultSet.getString("payment_proof_path");
+
 
                 // Now fetch the items for this order
                 List<DetailedOrderItem> items = new ArrayList<>();
@@ -56,7 +62,8 @@ public class OrderFetcher {
                 }
 
                 // Create the Order object with the actual address details
-                orders.add(new Order(orderId, totalPrice, orderDate, street, barangay, items, contactNumber, orderStatus, imagePath));
+                orders.add(new Order(orderId, totalPrice, orderDate, street, barangay, items, contactNumber, orderStatus, imagePath, orderType, paymentMethod, 
+                        paymentStatus, pickupTime, proofOfPaymentImage));
 
             }
 
@@ -67,7 +74,7 @@ public class OrderFetcher {
     }
     public static List<Order> fetchOrdersByRider(int riderId) {
     List<Order> orders = new ArrayList<>();
-    String query = "SELECT o.order_id, o.total_price, o.order_date, o.status, o.proof_of_delivery_image_path, a.street, b.barangay_name, a.contact_number " +
+    String query = "SELECT SELECT o.*, a.street, b.barangay_name, a.contact_number " +
                    "FROM orders o " +
                    "JOIN addresses a ON o.address_id = a.address_id " +
                    "JOIN barangay b ON a.barangay_id = b.barangay_id " +
@@ -92,7 +99,14 @@ public class OrderFetcher {
             String barangay = orderResultSet.getString("barangay_name");
             String contactNumber = orderResultSet.getString("contact_number");
             String orderStatus = orderResultSet.getString("status");
-             String imagePath = orderResultSet.getString("proof_of_delivery_image_path");
+            String imagePath = orderResultSet.getString("proof_of_delivery_image_path");
+            String orderType = orderResultSet.getString("order_type");
+            String paymentMethod = orderResultSet.getString("payment_method");
+            String paymentStatus = orderResultSet.getString("payment_status");
+            String pickupTime = orderResultSet.getString("pickup_time");
+             String proofOfPaymentImage = orderResultSet.getString("payment_proof_path");
+
+
              
             // Fetch items for this order
             List<DetailedOrderItem> orderItems = new ArrayList<>();
@@ -113,7 +127,8 @@ public class OrderFetcher {
             }
 
             // Create the Order object with the address details and order items
-            Order order = new Order(orderId, totalPrice, orderDate, street, barangay, orderItems, contactNumber, orderStatus, imagePath);
+            Order order = new Order(orderId, totalPrice, orderDate, street, barangay, orderItems, contactNumber, 
+                    orderStatus, imagePath, orderType, paymentMethod, paymentStatus, pickupTime, proofOfPaymentImage);
 
             // Add order to the list
             orders.add(order);

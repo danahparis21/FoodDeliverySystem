@@ -16,11 +16,17 @@ public class Order {
         private String contactNumber;
         private String orderStatus;
         private String imagePath;
+        private String orderType;
+        private String paymentMethod;
+        private String paymentStatus;
+        private String pickupTime;
+        private String proofOfPaymentImage;
 
     // Constructor
     public Order(int orderId, double totalPrice, String orderDate,
             String street, String barangay, List<DetailedOrderItem> orderItems, 
-            String contactNumber, String orderStatus, String imagePath) {
+            String contactNumber, String orderStatus, String imagePath, String orderType, String paymentMethod,
+            String paymentStatus, String pickupTime, String proofOfPaymentImage) {
         this.orderId = orderId;
         this.totalPrice = totalPrice;
         this.orderDate = orderDate;
@@ -30,6 +36,11 @@ public class Order {
          this.contactNumber = contactNumber;
         this.orderStatus = orderStatus;
         this.imagePath = imagePath;
+        this.orderType = orderType;
+        this.paymentMethod = paymentMethod;
+        this.paymentStatus = paymentStatus;
+        this.pickupTime = pickupTime;
+        this.proofOfPaymentImage = proofOfPaymentImage;
     }
 
     // Getters
@@ -68,6 +79,29 @@ public class Order {
      public String getProofOfDeliveryImagePath() {
         return imagePath;
     }
+     
+      public String getOrderType() {
+        return orderType;
+    }
+      
+      public String getPaymentMethod() {
+        return paymentMethod;
+    }
+      
+       
+        public String getPaymentStatus() {
+        return paymentStatus;
+    }
+      
+     public String getPickupTime() {
+        return pickupTime;
+    }
+      
+     
+      
+    public String getProofOfPaymentImagePath() {
+        return proofOfPaymentImage;
+    }
         // Setters
     public void setOrderId(int orderId) {
         this.orderId = orderId;
@@ -96,6 +130,15 @@ public class Order {
     public void setContactNumber(String contactNumber) {
         this.contactNumber = contactNumber;
     }
+    
+    public void setPaymentStatus(String paymentStatus) {
+        this.paymentStatus = paymentStatus;
+    }
+    
+    public void setOrderStatus(String orderStatus) {
+         this.orderStatus = orderStatus;
+
+        }
 }
 
     

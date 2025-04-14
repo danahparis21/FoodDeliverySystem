@@ -30,6 +30,9 @@ import javafx.scene.shape.Circle;
 
 public class ShowOrders {
     private VBox root;
+      private Button orderPickedUpButton;
+      private  Button assignToRiderButton;
+      private Button verifyPaymentButton = new Button("Verify Payment");
 
     public ShowOrders() {
         root = new VBox(10); // Adjusted spacing
@@ -120,7 +123,29 @@ public class ShowOrders {
 
             addressBox.getChildren().addAll(addressHeader, streetBox, barangayBox, contactBox);
 
-             mainContent.getChildren().addAll(idStatusBox, dateLabel, totalLabel, addressBox);
+            
+            // Add order type (delivery/pickup)
+            String orderType = order.getOrderType();  // Get the order type
+            Label orderTypeLabel = new Label("Order Type: " + orderType);
+            orderTypeLabel.setStyle("-fx-font-weight: bold;");
+        
+             // Add payment method and status
+            String paymentMethod = order.getPaymentMethod();
+            String paymentStatus = order.getPaymentStatus(); // e.g., Paid, Pending, etc.
+            Label paymentMethodLabel = new Label("Payment Method: " + paymentMethod);
+            Label paymentStatusLabel = new Label("Payment Status: " + paymentStatus);
+
+            // If order is for pickup, show pickup time
+            if ("pick up".equalsIgnoreCase(orderType)) {
+                String pickupTime = order.getPickupTime();  // Get pickup time from database
+                Label pickupTimeLabel = new Label("Pickup Time: " + pickupTime);
+                mainContent.getChildren().add(pickupTimeLabel);
+            }
+        
+            mainContent.getChildren().addAll(idStatusBox, dateLabel, totalLabel, addressBox, orderTypeLabel, paymentMethodLabel, paymentStatusLabel);
+
+         
+
 
             // === DETAILS BOX (initially hidden) ===
             VBox orderDetailsBox = new VBox(10);
@@ -160,30 +185,31 @@ public class ShowOrders {
                 orderDetailsBox.getChildren().add(itemBox);
             }
 
-              Button orderPickedUpButton = new Button("Order Picked Up");
+               orderPickedUpButton = new Button("Order Picked Up");
             orderPickedUpButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
             orderPickedUpButton.setDisable(true); // Initially disabled
 
-            Button assignToRiderButton = new Button("Assign to Rider");
+             assignToRiderButton = new Button("Assign to Rider");
             assignToRiderButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
 
-            ImageView imageView = new ImageView();
-            imageView.setFitWidth(200); // Set the width of the image
-            imageView.setFitHeight(200); // Set the height of the image
-            imageView.setPreserveRatio(true); // Maintain the aspect ratio of the image
-
+          
+          
                         // Assuming you are getting the proof of delivery image path from the database (proof_of_delivery_image_path)
             String proofOfDeliveryImagePath = order.getProofOfDeliveryImagePath();
-
-            // If the order is completed and the proof of delivery image exists, load the image
+            ImageView imageView = new ImageView();
             if (status.equalsIgnoreCase("completed") && proofOfDeliveryImagePath != null && !proofOfDeliveryImagePath.isEmpty()) {
-                // Load the image from the file path
-                Image image = new Image("file:" + proofOfDeliveryImagePath);
-                imageView.setImage(image);
-            } else {
-                // Optionally, set the image view to null or a placeholder if no proof image
-                imageView.setImage(null); // or set a placeholder image
-            }
+           
+            imageView.setFitWidth(200);
+            imageView.setFitHeight(200);
+            imageView.setPreserveRatio(true);
+
+            Image image = new Image("file:" + proofOfDeliveryImagePath);
+            imageView.setImage(image);
+
+            // Add only if the image is actually present
+            orderBox.getChildren().add(imageView);
+        }
+
             
            assignToRiderButton.setOnAction(assign -> {
                 showRiderSelectionDialog(order);
@@ -199,7 +225,24 @@ public class ShowOrders {
                 ordersContainer.getChildren().remove(orderBox);
                 ordersContainer.getChildren().add(orderBox);
             });
+            
+              if ("pending verification".equalsIgnoreCase(paymentStatus)) {
+                 verifyPaymentButton = new Button("Verify Payment");
+                mainContent.getChildren().add(verifyPaymentButton);
 
+            verifyPaymentButton.setOnAction(e -> {
+               PaymentVerificationWindow.show(order, paymentStatusLabel, orderBox, ordersContainer, statusLabel, statusCircle,
+                               verifyPaymentButton, assignToRiderButton, orderPickedUpButton);
+
+           });
+        }
+              if ("completed".equalsIgnoreCase(order.getOrderStatus()) || 
+            "cancelled".equalsIgnoreCase(order.getOrderStatus())) {
+
+            verifyPaymentButton.setDisable(true);
+            assignToRiderButton.setDisable(true);
+            orderPickedUpButton.setDisable(true);
+        }
 
 //            orderDetailsBox.getChildren().addAll(assignToRiderButton, orderPickedUpButton);
 
@@ -239,6 +282,8 @@ public class ShowOrders {
    
         VBox.setVgrow(scrollPane, Priority.ALWAYS); 
     }
+    
+    
     
     private String capitalize(String text) {
     if (text == null || text.isEmpty()) return "";

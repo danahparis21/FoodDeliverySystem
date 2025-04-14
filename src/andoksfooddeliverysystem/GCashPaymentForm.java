@@ -299,7 +299,7 @@ public class GCashPaymentForm {
     
     processPaymentBtn.setOnAction(e -> {
         
-        String proofFilePath = (String) proofFilePathField.getUserData();
+         proofFilePath = (String) proofFilePathField.getUserData();
         if (proofFilePath == null || proofFilePath.isEmpty()) {
             showAlert("Error", "Please upload proof of payment.");
             return;

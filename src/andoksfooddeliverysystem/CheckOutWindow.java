@@ -548,6 +548,8 @@ public class CheckOutWindow {
             
             if (orderId != -1) {
                     gcashForm.saveProofOfPayment(orderId, proofPath);
+                    System.out.println("Proof path: " + proofPath);
+
                     saveOrderItemsToDatabase(orderId);
                     
                   
