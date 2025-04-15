@@ -46,6 +46,7 @@ public class PaymentVerificationWindow {
 
     approveBtn.setOnAction(ae -> {
         updatePaymentStatus(order.getOrderId(), "Paid");
+        
         order.setPaymentStatus("Paid");
         paymentStatusLabel.setText("Payment Status: Paid");
         // Disable all related buttons

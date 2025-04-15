@@ -128,6 +128,7 @@ public class AssignedOrders {
 
             addressBox.getChildren().addAll(addressHeader, streetBox, barangayBox, contactBox);
 
+            
       
               Button trackButton = new Button("📍 Track");
             trackButton.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white;");
@@ -161,8 +162,19 @@ public class AssignedOrders {
             trackAddressBox.setAlignment(Pos.CENTER_LEFT); // Align items to the left
             trackAddressBox.getChildren().addAll(addressBox, trackButton);
 
+              // Add order type (delivery/pickup)
+            String orderType = order.getOrderType();  // Get the order type
+            Label orderTypeLabel = new Label("Order Type: " + orderType);
+            orderTypeLabel.setStyle("-fx-font-weight: bold;");
+        
+             // Add payment method and status
+            String paymentMethod = order.getPaymentMethod();
+            String paymentStatus = order.getPaymentStatus(); // e.g., Paid, Pending, etc.
+            Label paymentMethodLabel = new Label("Payment Method: " + paymentMethod);
+            Label paymentStatusLabel = new Label("Payment Status: " + paymentStatus);
+
        
-             mainContent.getChildren().addAll(idStatusBox, dateLabel, totalLabel, trackAddressBox);
+             mainContent.getChildren().addAll(idStatusBox, dateLabel, totalLabel, trackAddressBox, orderTypeLabel, paymentMethodLabel, paymentStatusLabel);
 
              
             // === DETAILS BOX (initially hidden) ===

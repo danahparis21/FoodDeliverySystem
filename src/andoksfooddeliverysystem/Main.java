@@ -43,8 +43,8 @@ public class Main extends Application {
         visiblePasswordField.setVisible(false);
 
         // Eye icon button
-        ImageView eyeIcon = new ImageView(new Image(getClass().getResourceAsStream("/icons/eye.png")));
-        eyeIcon.setFitWidth(20);
+        ImageView eyeIcon = new ImageView(new Image(Main.class.getResourceAsStream("/icons/eye.png")));
+         eyeIcon.setFitWidth(20);
         eyeIcon.setFitHeight(20);
         Button eyeButton = new Button();
         eyeButton.setGraphic(eyeIcon);
@@ -128,15 +128,14 @@ public class Main extends Application {
 
 
         scene = new Scene(root, 400, 300);
-        scene.getStylesheets().add(getClass().getResource("/styles/light-theme.css").toExternalForm());
+        scene.getStylesheets().add(Main.class.getResource("/styles/light-theme.css").toExternalForm());
 
         Button toggleThemeBtn = new Button("Toggle Dark Mode");
         toggleThemeBtn.setOnAction(e -> {
             darkMode = !darkMode;
             scene.getStylesheets().clear();
             String theme = darkMode ? "/styles/dark-theme.css" : "/styles/light-theme.css";
-            scene.getStylesheets().add(getClass().getResource(theme).toExternalForm());
-
+            scene.getStylesheets().add(Main.class.getResource(theme).toExternalForm());
             // Change title text color dynamically
             title.setStyle(darkMode
                     ? "-fx-font-size: 20px; -fx-text-fill: white;"

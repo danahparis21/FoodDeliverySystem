@@ -74,7 +74,7 @@ public class OrderFetcher {
     }
     public static List<Order> fetchOrdersByRider(int riderId) {
     List<Order> orders = new ArrayList<>();
-    String query = "SELECT SELECT o.*, a.street, b.barangay_name, a.contact_number " +
+    String query = "SELECT  o.*, a.street, b.barangay_name, a.contact_number " +
                    "FROM orders o " +
                    "JOIN addresses a ON o.address_id = a.address_id " +
                    "JOIN barangay b ON a.barangay_id = b.barangay_id " +

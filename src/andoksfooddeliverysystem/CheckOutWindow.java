@@ -470,7 +470,15 @@ public class CheckOutWindow {
                 totalPrice = subtotal + 49.00;  // Adding delivery fee
                 return;
             }
+            
+            // If it's pickup, but no time slots are available
+            if (deliveryTypeCombo.getValue().equals("For Pick Up") && pickupTimeCombo.getValue().equals("No available time slots")) {
+                showAlert("Error", "Pick-Up Unavailable, please use Delivery");
+                totalPrice = subtotal + 49.00;  // Adding delivery fee
+                return;
+            }
 
+             
             String paymentMethod = paymentMethodComboBox.getSelectionModel().getSelectedItem() != null 
                                     ? paymentMethodComboBox.getSelectionModel().getSelectedItem() 
                                     : "Cash"; // Default to "COD" if nothing is selected

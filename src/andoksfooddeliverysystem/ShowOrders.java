@@ -188,15 +188,27 @@ public class ShowOrders {
             final Button orderPickedUpButton = new Button("Order Picked Up");
             final Button verifyPaymentButton = new Button("Verify Payment");
 
+            if ("delivery".equalsIgnoreCase(orderType)) {
+                orderDetailsBox.getChildren().add(assignToRiderButton);
+                
+                orderPickedUpButton.setDisable(true);
+            }
+           
+
+            if ("pick up".equalsIgnoreCase(orderType)) {
+            orderPickedUpButton.setText("Complete Order");
+            orderPickedUpButton.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white;");
+            orderPickedUpButton.setDisable(false);
+        } else {
+            orderPickedUpButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
+        }
+
 
             
             orderPickedUpButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
-            orderPickedUpButton.setDisable(true); // Initially disabled
-
-        
+           
             assignToRiderButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
 
-          
           
                         // Assuming you are getting the proof of delivery image path from the database (proof_of_delivery_image_path)
             String proofOfDeliveryImagePath = order.getProofOfDeliveryImagePath();
@@ -222,13 +234,32 @@ public class ShowOrders {
             });
 
         
-            orderPickedUpButton.setOnAction(pickedUp -> {
-                markOrderPickedUp(order);
-                orderPickedUpButton.setDisable(true);
-                orderBox.setStyle("-fx-background-color: #d3d3d3;");
-                ordersContainer.getChildren().remove(orderBox);
-                ordersContainer.getChildren().add(orderBox);
-            });
+          orderPickedUpButton.setOnAction(pickedUp -> {
+            markOrderPickedUp(order); // Update DB or internal state
+            orderPickedUpButton.setDisable(true);
+            verifyPaymentButton.setDisable(true);
+            assignToRiderButton.setDisable(true);
+
+            String orderTypeLower = orderType.toLowerCase(); // "delivery" or "pick up"
+
+            if ("delivery".equals(orderTypeLower)) {
+                order.setOrderStatus("out for delivery"); // Update internal status
+                statusLabel.setText("Out for Delivery");
+                statusLabel.setTextFill(Color.GOLD);
+                statusCircle.setFill(Color.GOLD);
+            } else if ("pick up".equals(orderTypeLower)) {
+                order.setOrderStatus("completed"); // Update internal status
+                statusLabel.setText("Completed");
+                statusLabel.setTextFill(Color.GREEN);
+                statusCircle.setFill(Color.GREEN);
+            }
+
+            // Optional: visually "gray out" the order to show it’s done
+            orderBox.setStyle("-fx-background-color: #d3d3d3;");
+            ordersContainer.getChildren().remove(orderBox);
+            ordersContainer.getChildren().add(orderBox);
+        });
+
             
              System.out.println("Checking order " + order.getOrderId());
             System.out.println("Payment Status: " + order.getPaymentStatus());
@@ -278,7 +309,7 @@ public class ShowOrders {
             });
 
            
-             orderDetailsBox.getChildren().addAll(assignToRiderButton, orderPickedUpButton, imageView);
+             orderDetailsBox.getChildren().addAll( orderPickedUpButton, imageView);
             orderBox.getChildren().addAll(mainContent, expandButton);
 
              // === ADD ORDER BOX ===
@@ -308,24 +339,34 @@ public class ShowOrders {
 }
 
   
-        private void markOrderPickedUp(Order order) {
-            String updateQuery = "UPDATE orders SET status = 'Out for Delivery' WHERE order_id = ?";
+      private void markOrderPickedUp(Order order) {
+        String newStatus;
 
-            try (Connection connection = Database.connect(); 
-                 PreparedStatement preparedStatement = connection.prepareStatement(updateQuery)) {
-
-                preparedStatement.setInt(1, order.getOrderId()); // Set the order_id
-
-                int rowsAffected = preparedStatement.executeUpdate();
-                if (rowsAffected > 0) {
-                    System.out.println("Order marked as 'Out for Delivery' successfully!");
-                } else {
-                    System.out.println("Failed to mark the order.");
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+        if ("pick up".equalsIgnoreCase(order.getOrderType())) {
+            newStatus = "Completed"; // pickup = done once picked up
+        } else {
+            newStatus = "Out for Delivery"; // delivery = still needs delivery
         }
+
+        String updateQuery = "UPDATE orders SET status = ? WHERE order_id = ?";
+
+        try (Connection connection = Database.connect(); 
+             PreparedStatement preparedStatement = connection.prepareStatement(updateQuery)) {
+
+            preparedStatement.setString(1, newStatus);
+            preparedStatement.setInt(2, order.getOrderId());
+
+            int rowsAffected = preparedStatement.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("Order marked as '" + newStatus + "' successfully!");
+            } else {
+                System.out.println("Failed to update the order.");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
 
 
     private void showRiderSelectionDialog(Order order) {
