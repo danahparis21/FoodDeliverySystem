@@ -194,51 +194,70 @@ public class RatingWindow {
         pane.setBackground(new Background(backgroundFill));
     }
     
-    private HBox createAnimatedStarRating(RatingChangeListener listener) {
+   private HBox createAnimatedStarRating(RatingChangeListener listener) {
         HBox starsContainer = new HBox(8);
         starsContainer.setAlignment(Pos.CENTER);
         starsContainer.setPadding(new Insets(10, 0, 15, 0));
-        
+
         ImageView[] stars = new ImageView[5];
-        
+
+        // Create a proper implementation of the listener that stores the rating
+        final RatingChangeListener ratingListener = new RatingChangeListener() {
+            private int currentRating = 0;
+
+            @Override
+            public void onRatingChanged(int rating) {
+                currentRating = rating;
+            }
+
+            @Override
+            public int getCurrentRating() {
+                return currentRating;
+            }
+        };
+
         // Create 5 stars
         for (int i = 0; i < 5; i++) {
             final int starIndex = i + 1;
             ImageView star = new ImageView(new Image(getClass().getResourceAsStream("/icons/star_empty.png")));
             star.setFitHeight(45);
             star.setFitWidth(45);
-            
+
             // Add hover effect
             star.setOnMouseEntered(e -> {
                 highlightStars(stars, starIndex);
-                
+
                 // Add pulse animation on hover
                 ScaleTransition pulse = new ScaleTransition(Duration.millis(300), star);
                 pulse.setToX(1.2);
                 pulse.setToY(1.2);
                 pulse.play();
             });
-            
+
             star.setOnMouseExited(e -> {
-                resetStars(stars, listener.getCurrentRating());
-                
+                // Use the stored rating from the listener
+                resetStars(stars, ratingListener.getCurrentRating());
+
                 // Reset scale
                 ScaleTransition pulse = new ScaleTransition(Duration.millis(300), star);
                 pulse.setToX(1.0);
                 pulse.setToY(1.0);
                 pulse.play();
             });
-            
+
             star.setOnMouseClicked(e -> {
+                // Update the listener with the new rating
+                ratingListener.onRatingChanged(starIndex);
+                // Also update the original listener passed in
                 listener.onRatingChanged(starIndex);
                 animateStarSelection(stars, starIndex);
             });
-            
+
             // Add to container
             stars[i] = star;
             starsContainer.getChildren().add(star);
         }
-        
+
         return starsContainer;
     }
     
@@ -472,28 +491,28 @@ public class RatingWindow {
             starAnim.play();
         }
         
-        // Discount coupon
-        Rectangle couponBg = new Rectangle(300, 80);
-        couponBg.setFill(ANDOKS_WHITE);
-        couponBg.setArcWidth(20);
-        couponBg.setArcHeight(20);
-        couponBg.setStroke(ANDOKS_YELLOW);
-        couponBg.setStrokeWidth(2);
-        
-        Label couponLabel = new Label("Get 10% OFF on your next order!");
-        couponLabel.setFont(Font.font("Poppins", FontWeight.BOLD, 14));
-        couponLabel.setTextFill(ANDOKS_DARK_RED);
-        
-        Label couponCode = new Label("CODE: THANKYOU10");
-        couponCode.setFont(Font.font("Poppins", FontWeight.BOLD, 16));
-        couponCode.setTextFill(ANDOKS_RED);
-        
-        VBox couponContent = new VBox(10);
-        couponContent.setAlignment(Pos.CENTER);
-        couponContent.getChildren().addAll(couponLabel, couponCode);
-        
-        StackPane coupon = new StackPane();
-        coupon.getChildren().addAll(couponBg, couponContent);
+//        // Discount coupon
+//        Rectangle couponBg = new Rectangle(300, 80);
+//        couponBg.setFill(ANDOKS_WHITE);
+//        couponBg.setArcWidth(20);
+//        couponBg.setArcHeight(20);
+//        couponBg.setStroke(ANDOKS_YELLOW);
+//        couponBg.setStrokeWidth(2);
+//        
+//        Label couponLabel = new Label("Get 10% OFF on your next order!");
+//        couponLabel.setFont(Font.font("Poppins", FontWeight.BOLD, 14));
+//        couponLabel.setTextFill(ANDOKS_DARK_RED);
+//        
+//        Label couponCode = new Label("CODE: THANKYOU10");
+//        couponCode.setFont(Font.font("Poppins", FontWeight.BOLD, 16));
+//        couponCode.setTextFill(ANDOKS_RED);
+//        
+//        VBox couponContent = new VBox(10);
+//        couponContent.setAlignment(Pos.CENTER);
+//        couponContent.getChildren().addAll(couponLabel, couponCode);
+//        
+//        StackPane coupon = new StackPane();
+//        coupon.getChildren().addAll(couponBg, couponContent);
         
         // Close button
         Button closeButton = createGradientButton("CLOSE");
@@ -504,7 +523,7 @@ public class RatingWindow {
             parentStage.close();
         });
         
-        content.getChildren().addAll(starContainer, messageLabel, coupon, closeButton);
+        content.getChildren().addAll(starContainer, messageLabel, closeButton);
         
         Scene scene = new Scene(content, 350, 400);
         thankYouStage.setScene(scene);

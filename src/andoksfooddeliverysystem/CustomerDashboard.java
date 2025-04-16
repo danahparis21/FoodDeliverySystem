@@ -26,7 +26,7 @@ public class CustomerDashboard extends Application {
     private VBox sideBar;
     private GridPane menuGrid;
     private Label cartCountLabel;
-    
+     private Stage primaryStage;
     // Constructor to receive userID
     public CustomerDashboard(int userID) {
         this.userID = userID;
@@ -35,6 +35,7 @@ public class CustomerDashboard extends Application {
     
     @Override
     public void start(Stage primaryStage) {
+        this.primaryStage = primaryStage;
         
         mainLayout = new BorderPane();
         
@@ -121,7 +122,19 @@ public class CustomerDashboard extends Application {
 
         // 👤 Profile Button
         Button profileBtn = new Button("👤");
-        profileBtn.setOnAction(e -> showProfile());
+        profileBtn.setOnAction(e -> {
+            Customer customer = CustomerDAO.getCustomerByUserId(userID);
+            if (customer != null) {
+                
+                CustomerProfile profile = new CustomerProfile();
+                profile.show(primaryStage, customer); // ← perfect!
+
+            } else {
+                System.out.println("⚠️ No customer found for user ID " + userID);
+            }
+});
+
+
 
         topBar.getChildren().addAll(searchField, notifBtn, cartButtonPane, profileBtn);
         return topBar;

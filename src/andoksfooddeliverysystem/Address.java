@@ -46,6 +46,7 @@ public class Address {
         return contactNumber;
     }
 
+    
     @Override
     public String toString() {
         return street + ", " + barangay + " (" + addressType + ")";

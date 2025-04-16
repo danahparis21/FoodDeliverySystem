@@ -141,6 +141,76 @@ public class OrderFetcher {
     return orders;
 }
     
+    public static List<Order> fetchOrdersbyCustomerID(int customerId) {
+        List<Order> orders = new ArrayList<>();
+
+        // SQL query to fetch orders and their associated address information for a specific customer
+        String orderQuery = "SELECT o.*, a.street, b.barangay_name, a.contact_number " +
+                            "FROM orders o " +
+                            "JOIN addresses a ON o.address_id = a.address_id " +
+                            "JOIN barangay b ON a.barangay_id = b.barangay_id " +
+                            "WHERE o.customer_id = ?"; // Fetch orders only for the given customer
+
+        // SQL query to fetch items for a specific order
+        String itemQuery = "SELECT oi.*, i.* \n" +
+                "FROM order_items oi\n" +
+                "JOIN menu_items i ON oi.item_id = i.item_id\n" +
+                "WHERE oi.order_id = ?"; 
+
+        try (Connection conn = Database.connect();
+             PreparedStatement stmt = conn.prepareStatement(orderQuery)) {
+
+            stmt.setInt(1, customerId); // Use customerId as a filter
+            ResultSet orderResultSet = stmt.executeQuery();
+
+            while (orderResultSet.next()) {
+                int orderId = orderResultSet.getInt("order_id");
+                double totalPrice = orderResultSet.getDouble("total_price");
+                String orderDate = orderResultSet.getString("order_date");
+                String street = orderResultSet.getString("street");
+                String barangay = orderResultSet.getString("barangay_name");
+                String contactNumber = orderResultSet.getString("contact_number");
+                String orderStatus = orderResultSet.getString("status");
+                String imagePath = orderResultSet.getString("proof_of_delivery_image_path");
+                String orderType = orderResultSet.getString("order_type");
+                String paymentMethod = orderResultSet.getString("payment_method");
+                String paymentStatus = orderResultSet.getString("payment_status");
+                String pickupTime = orderResultSet.getString("pickup_time");
+                String proofOfPaymentImage = orderResultSet.getString("payment_proof_path");
+
+                // Now fetch the items for this order
+                List<DetailedOrderItem> items = new ArrayList<>();
+                try (PreparedStatement ps = conn.prepareStatement(itemQuery)) {
+                    ps.setInt(1, orderId);
+                    ResultSet itemResultSet = ps.executeQuery();
+
+                    while (itemResultSet.next()) {
+                        int itemId = itemResultSet.getInt("item_id");
+                        String itemName = itemResultSet.getString("name");
+                        int quantity = itemResultSet.getInt("quantity");
+                        double subtotal = itemResultSet.getDouble("subtotal");
+                        String variation = itemResultSet.getString("variation");
+                        String instructions = itemResultSet.getString("instructions");
+                        items.add(new DetailedOrderItem(itemId, itemName, quantity, totalPrice, subtotal, variation, instructions));
+                    }
+                }
+
+                
+                
+                // Create the Order object with the actual address details
+                orders.add(new Order(orderId, totalPrice, orderDate, street, barangay, items, contactNumber, orderStatus, imagePath, orderType, paymentMethod, 
+                        paymentStatus, pickupTime, proofOfPaymentImage));
+                
+                
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return orders;
+    }
+
+    
     public static Order getOrderById(int targetOrderId) {
     for (Order o : fetchOrders()) {
         if (o.getOrderId() == targetOrderId) {
