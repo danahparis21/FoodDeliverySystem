@@ -9,15 +9,19 @@ public class OrderItem {
     private int itemId;
     private int quantity;
     private double subtotal;
+    private String name;
 
     // Constructor
-    public OrderItem(int itemId, int quantity, double subtotal) {
+    public OrderItem(int itemId, int quantity, double subtotal, String name) {
         this.itemId = itemId;
         this.quantity = quantity;
         this.subtotal = subtotal;
+        this.name = name;
     }
 
     // Getters
+    
+   
     public int getItemId() {
         return itemId;
     }
@@ -28,5 +32,9 @@ public class OrderItem {
 
     public double getSubtotal() {
         return subtotal;
+    }
+    
+     public String getName(){
+        return name;
     }
 }

@@ -88,6 +88,10 @@ public class ShowOrders {
                     statusCircle.setFill(Color.GRAY); // Gray circle for cancelled
                     statusColor = Color.GRAY;
                     break;
+                case "ready for pickup":
+                    statusCircle.setFill(Color.BLUE); // Blue circle for ready for pickup
+                    statusColor = Color.BLUE;
+                    break;
                 default:
                     statusCircle.setFill(Color.BLACK); // Default black circle
                     statusColor = Color.BLACK;
@@ -187,6 +191,9 @@ public class ShowOrders {
             final Button assignToRiderButton = new Button("Assign to Rider");
             final Button orderPickedUpButton = new Button("Order Picked Up");
             final Button verifyPaymentButton = new Button("Verify Payment");
+            // Add a new button for "Mark as Ready for Pickup"
+            final Button readyForPickupButton = new Button("Mark as Ready for Pickup");
+
 
             if ("delivery".equalsIgnoreCase(orderType)) {
                 orderDetailsBox.getChildren().add(assignToRiderButton);
@@ -199,6 +206,7 @@ public class ShowOrders {
             orderPickedUpButton.setText("Complete Order");
             orderPickedUpButton.setStyle("-fx-background-color: #27ae60; -fx-text-fill: white;");
             orderPickedUpButton.setDisable(false);
+             mainContent.getChildren().add(readyForPickupButton);
         } else {
             orderPickedUpButton.setStyle("-fx-background-color: #3498db; -fx-text-fill: white;");
         }
@@ -236,6 +244,7 @@ public class ShowOrders {
         
           orderPickedUpButton.setOnAction(pickedUp -> {
             markOrderPickedUp(order); // Update DB or internal state
+                readyForPickupButton.setDisable(true); 
             orderPickedUpButton.setDisable(true);
             verifyPaymentButton.setDisable(true);
             assignToRiderButton.setDisable(true);
@@ -260,6 +269,20 @@ public class ShowOrders {
             ordersContainer.getChildren().add(orderBox);
         });
 
+          
+        readyForPickupButton.setOnAction(e -> {
+            markOrderReadyForPickup(order); // Update DB or internal state
+            readyForPickupButton.setDisable(true);  // Disable the button after it is clicked
+
+            // Optionally change the status label to "Ready for Pickup"
+            statusLabel.setText("Ready for Pickup");
+            statusLabel.setTextFill(Color.BLUE);  // A distinct color for "Ready for Pickup"
+            statusCircle.setFill(Color.BLUE);  // Color of the status circle to blue
+
+            // Optional: visually update the order box to reflect this state
+            orderBox.setStyle("-fx-background-color: #add8e6;"); // Light blue to indicate ready for pickup
+         
+        });
             
              System.out.println("Checking order " + order.getOrderId());
             System.out.println("Payment Status: " + order.getPaymentStatus());
@@ -285,7 +308,7 @@ public class ShowOrders {
             }
 
                           if ("completed".equalsIgnoreCase(order.getOrderStatus()) || 
-            "cancelled".equalsIgnoreCase(order.getOrderStatus())) {
+            "cancelled".equalsIgnoreCase(order.getOrderStatus()) || "out for delivery".equalsIgnoreCase(order.getOrderStatus())) {
 
             verifyPaymentButton.setDisable(true);
             assignToRiderButton.setDisable(true);
@@ -331,6 +354,28 @@ public class ShowOrders {
         VBox.setVgrow(scrollPane, Priority.ALWAYS); 
     }
     
+    private void markOrderReadyForPickup(Order order) {
+    String newStatus = "Ready for Pick-up"; // Define status for pickup
+
+    String updateQuery = "UPDATE orders SET status = ? WHERE order_id = ?";
+
+    try (Connection connection = Database.connect(); 
+         PreparedStatement preparedStatement = connection.prepareStatement(updateQuery)) {
+
+        preparedStatement.setString(1, newStatus);
+        preparedStatement.setInt(2, order.getOrderId());
+
+        int rowsAffected = preparedStatement.executeUpdate();
+        if (rowsAffected > 0) {
+            System.out.println("Order marked as 'Ready for Pickup' successfully!");
+        } else {
+            System.out.println("Failed to update the order.");
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+}
+
     
     
     private String capitalize(String text) {

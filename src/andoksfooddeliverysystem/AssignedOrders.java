@@ -266,6 +266,10 @@ public class AssignedOrders {
             completeOrderButton.setOnAction(pickedUp -> {
             markOrderCompleted(order);
             completeOrderButton.setDisable(true);
+            order.setOrderStatus("completed"); // Update internal status
+            statusLabel.setText("Completed");
+            statusLabel.setTextFill(Color.GREEN);
+            statusCircle.setFill(Color.GREEN);
             orderBox.setStyle("-fx-background-color: #d3d3d3;"); // Light gray color
             ordersContainer.getChildren().remove(orderBox);  
             ordersContainer.getChildren().add(orderBox);    

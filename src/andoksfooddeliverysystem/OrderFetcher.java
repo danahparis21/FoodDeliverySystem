@@ -140,4 +140,22 @@ public class OrderFetcher {
 
     return orders;
 }
+    
+    public static Order getOrderById(int targetOrderId) {
+    for (Order o : fetchOrders()) {
+        if (o.getOrderId() == targetOrderId) {
+            return o;
+        }
+    }
+    return null;
+}
+    
+    public static Order fetchOrderById(int orderId) {
+    return fetchOrders().stream()
+        .filter(o -> o.getOrderId() == orderId)
+        .findFirst()
+        .orElse(null);
+}
+
+
 }

@@ -380,6 +380,7 @@ public class CheckOutWindow {
             double itemPrice = getItemPriceById(itemId);
              totalPrice = itemPrice * quantity;
             subtotal += totalPrice;
+            
 
             // Create Item Display in Checkout
             HBox itemRow = new HBox(15);
@@ -403,7 +404,7 @@ public class CheckOutWindow {
             // Add item row to the summary
             itemRow.getChildren().addAll(itemImage, namePriceBox);
             orderSummary.getChildren().add(itemRow);
-            OrderItem orderItem = new OrderItem(itemId, quantity, subtotal);
+            OrderItem orderItem = new OrderItem(itemId, quantity, subtotal, itemName);
             itemsList.add(orderItem);
         }
          
@@ -474,7 +475,7 @@ public class CheckOutWindow {
             // If it's pickup, but no time slots are available
             if (deliveryTypeCombo.getValue().equals("For Pick Up") && pickupTimeCombo.getValue().equals("No available time slots")) {
                 showAlert("Error", "Pick-Up Unavailable, please use Delivery");
-                totalPrice = subtotal + 49.00;  // Adding delivery fee
+                totalPrice = subtotal + 49.00;  // Adding delivery feedanah
                 return;
             }
 
@@ -508,6 +509,12 @@ public class CheckOutWindow {
                         CartSession.clearCart();
                         CartSession.notifyCartChanged();
                         ((Stage) placeOrderBtn.getScene().getWindow()).close();
+                        // 👉 Load full order from DB
+                       Order order = OrderFetcher.getOrderById(orderId);
+                        if (order != null) {
+                            OrderSummary summaryWindow = new OrderSummary();
+                            summaryWindow.show(order);
+                        }
                     } else {
                         showAlert("Error", "Failed to place the order.");
                     }
@@ -539,6 +546,12 @@ public class CheckOutWindow {
                         CartSession.clearCart();
                         CartSession.notifyCartChanged();
                         ((Stage) placeOrderBtn.getScene().getWindow()).close();
+                        // 👉 Load full order from DB
+                       Order order = OrderFetcher.getOrderById(orderId);
+                        if (order != null) {
+                            OrderSummary summaryWindow = new OrderSummary();
+                            summaryWindow.show(order);
+                        }
                     } else {
                         showAlert("Error", "Failed to place the order.");
                     }
@@ -546,13 +559,16 @@ public class CheckOutWindow {
                 return;
             }
         }
+             
         if ("GCash".equals(paymentMethod)) {
+           
             GCashPaymentForm gcashForm = new GCashPaymentForm(customerID, addressId, totalPrice);
+            // Save the order with effective addressId for pickup or selected address for delivery
+            int orderId = saveOrderToDatabase(customerID, effectiveAddressId, totalPrice, paymentMethod, orderType, pickupTime);
+            
             gcashForm.setOnPaymentSuccess(() -> {
                    String proofPath = gcashForm.getProofFilePath(); // ← get the proof path from GCash form
 
-            // Save the order with effective addressId for pickup or selected address for delivery
-             int orderId = saveOrderToDatabase(customerID, effectiveAddressId, totalPrice, paymentMethod, orderType, pickupTime);
             
             if (orderId != -1) {
                     gcashForm.saveProofOfPayment(orderId, proofPath);
@@ -564,18 +580,28 @@ public class CheckOutWindow {
                     CartSession.clearCart();
                     CartSession.notifyCartChanged();
                     ((Stage) placeOrderBtn.getScene().getWindow()).close();
-                    
+                   
+
                      // Use PauseTransition to add delay before showing the alert
                 PauseTransition pause = new PauseTransition(Duration.seconds(1)); // Adjust delay if needed
                 pause.setOnFinished(event -> {
                     gcashForm.showVerificationPendingAlert(orderId);  // Show the alert after the delay
+                     // 👉 Load full order from DB
+                       Order order = OrderFetcher.getOrderById(orderId);
+                    if (order != null) {
+                        OrderSummary summaryWindow = new OrderSummary();
+                        summaryWindow.show(order);
+                    }
                 });
                 pause.play();
                 } else {
                     showAlert("Error", "Failed to place the order.");
                 }
+            
+                
             });
             gcashForm.showGCashPaymentForm();
+           
             return;
         }
 
@@ -589,6 +615,12 @@ public class CheckOutWindow {
             CartSession.clearCart();
             CartSession.notifyCartChanged();
             ((Stage) placeOrderBtn.getScene().getWindow()).close();
+            // 👉 Load full order from DB
+                Order order = OrderFetcher.getOrderById(orderId);
+             if (order != null) {
+                 OrderSummary summaryWindow = new OrderSummary();
+                 summaryWindow.show(order);
+             }
         } else {
             showAlert("Error", "Failed to place the order.");
         }
