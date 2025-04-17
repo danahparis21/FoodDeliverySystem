@@ -73,8 +73,12 @@ public class CheckOutWindow {
 
 
 
-   public static void displayCheckout(int customerID, Map<Integer, Integer> cartItems, Map<Integer, String> variations, Map<Integer, String> instructions) {
-          System.out.println("✅ Checkout opened for User ID: " + customerID); // Debugging
+   public static void displayCheckout(int userId, Map<Integer, Integer> cartItems, Map<Integer, String> variations, Map<Integer, String> instructions) {
+          System.out.println("✅ Checkout opened for User ID: " + userId); // Debugging
+          int customerId = getCustomerIdFromUserId(userId);
+
+        System.out.println("✅ Checkout opened for User ID: " + userId + ", Customer ID: " + customerId);
+
 
         Stage checkoutStage = new Stage();
         checkoutStage.initStyle(StageStyle.UTILITY);
@@ -186,12 +190,13 @@ public class CheckOutWindow {
 
             // Save address to the database and get the address_id
             addressId = saveAddressToDatabase(
-                customerID, // ✅ Use correct customerID
+                customerId, // ✅ Use correct customerID
                 streetField.getText().trim(),
                 barangayCombo.getSelectionModel().getSelectedItem(),
                 typeCombo.getValue(),
                 defaultCheck.isSelected(),
-                contactNumberField.getText().trim()
+                contactNumberField.getText().trim(),
+                    userId
             );
 
             if (addressId != -1) {
@@ -211,7 +216,7 @@ public class CheckOutWindow {
         
         // Address list display (ListView)
         ListView<Address> addressListView = new ListView<>();
-        addressListView.setItems(getCustomerAddresses(customerID)); // Load customer addresses
+        addressListView.setItems(getCustomerAddresses(customerId)); // Load customer addresses
 
         // Make the list scrollable
        addressListView.setPrefHeight(100); // or even 200
@@ -412,7 +417,7 @@ public class CheckOutWindow {
         cardSelectionContainer.getChildren().clear(); // Clear previous UI
 
         if ("Credit/Debit Card".equals(newValue)) {
-            List<Card> savedCards = getSavedCardsForCustomer(customerID); // Your DB method
+            List<Card> savedCards = getSavedCardsForCustomer(customerId); // Your DB method
 
              
            if (!savedCards.isEmpty()) {
@@ -501,10 +506,10 @@ public class CheckOutWindow {
                 CardPaymentForm cardForm = new CardPaymentForm();
                 cardForm.setOnPaymentSuccess(() -> {
                    
-                int orderId = saveOrderToDatabase(customerID, effectiveAddressId, totalPrice, paymentMethod, orderType, pickupTime);
+                int orderId = saveOrderToDatabase(customerId, effectiveAddressId, totalPrice, paymentMethod, orderType, pickupTime, userId);
 
                      if (orderId != -1) {
-                        saveOrderItemsToDatabase(orderId);
+                        saveOrderItemsToDatabase(orderId, userId);
 //                        showAlert("Success", "Your order has been placed successfully!");
                         CartSession.clearCart();
                         CartSession.notifyCartChanged();
@@ -513,13 +518,13 @@ public class CheckOutWindow {
                        Order order = OrderFetcher.getOrderById(orderId);
                         if (order != null) {
                             OrderSummary summaryWindow = new OrderSummary();
-                            summaryWindow.show(order);
+                            summaryWindow.show(order, userId);
                         }
                     } else {
                         showAlert("Error", "Failed to place the order.");
                     }
                 });
-                cardForm.showCardPaymentForm(customerID);
+                cardForm.showCardPaymentForm(customerId, userId);
                 return; // Don't continue until payment is complete
             } else {
                 // Saved card: confirm then process
@@ -539,9 +544,9 @@ public class CheckOutWindow {
 
                      // ✅ Now place the order
                     
-                int orderId = saveOrderToDatabase(customerID, effectiveAddressId, totalPrice, paymentMethod, orderType, pickupTime);
+                int orderId = saveOrderToDatabase(customerId, effectiveAddressId, totalPrice, paymentMethod, orderType, pickupTime, userId);
                 if (orderId != -1) {
-                        saveOrderItemsToDatabase(orderId);
+                        saveOrderItemsToDatabase(orderId, userId);
                         showAlert("Success", "Your order has been placed successfully!");
                         CartSession.clearCart();
                         CartSession.notifyCartChanged();
@@ -550,7 +555,7 @@ public class CheckOutWindow {
                        Order order = OrderFetcher.getOrderById(orderId);
                         if (order != null) {
                             OrderSummary summaryWindow = new OrderSummary();
-                            summaryWindow.show(order);
+                            summaryWindow.show(order, userId);
                         }
                     } else {
                         showAlert("Error", "Failed to place the order.");
@@ -562,9 +567,9 @@ public class CheckOutWindow {
              
         if ("GCash".equals(paymentMethod)) {
            
-            GCashPaymentForm gcashForm = new GCashPaymentForm(customerID, addressId, totalPrice);
+            GCashPaymentForm gcashForm = new GCashPaymentForm(customerId, addressId, totalPrice);
             // Save the order with effective addressId for pickup or selected address for delivery
-            int orderId = saveOrderToDatabase(customerID, effectiveAddressId, totalPrice, paymentMethod, orderType, pickupTime);
+            int orderId = saveOrderToDatabase(customerId, effectiveAddressId, totalPrice, paymentMethod, orderType, pickupTime, userId);
             
             gcashForm.setOnPaymentSuccess(() -> {
                    String proofPath = gcashForm.getProofFilePath(); // ← get the proof path from GCash form
@@ -574,7 +579,7 @@ public class CheckOutWindow {
                     gcashForm.saveProofOfPayment(orderId, proofPath);
                     System.out.println("Proof path: " + proofPath);
 
-                    saveOrderItemsToDatabase(orderId);
+                    saveOrderItemsToDatabase(orderId, userId);
                     
                   
                     CartSession.clearCart();
@@ -590,7 +595,7 @@ public class CheckOutWindow {
                        Order order = OrderFetcher.getOrderById(orderId);
                     if (order != null) {
                         OrderSummary summaryWindow = new OrderSummary();
-                        summaryWindow.show(order);
+                        summaryWindow.show(order, userId);
                     }
                 });
                 pause.play();
@@ -607,10 +612,10 @@ public class CheckOutWindow {
 
         // COD: direct order placement
         
-        int orderId = saveOrderToDatabase(customerID, effectiveAddressId, totalPrice, paymentMethod, orderType, pickupTime);
+        int orderId = saveOrderToDatabase(customerId, effectiveAddressId, totalPrice, paymentMethod, orderType, pickupTime, userId);
 
         if (orderId != -1) {
-            saveOrderItemsToDatabase(orderId);
+            saveOrderItemsToDatabase(orderId, userId);
             showAlert("Success", "Your order has been placed successfully!");
             CartSession.clearCart();
             CartSession.notifyCartChanged();
@@ -619,7 +624,7 @@ public class CheckOutWindow {
                 Order order = OrderFetcher.getOrderById(orderId);
              if (order != null) {
                  OrderSummary summaryWindow = new OrderSummary();
-                 summaryWindow.show(order);
+                 summaryWindow.show(order, userId);
              }
         } else {
             showAlert("Error", "Failed to place the order.");
@@ -656,6 +661,25 @@ public class CheckOutWindow {
         checkoutStage.showAndWait();
     }
    
+   public static int getCustomerIdFromUserId(int userId) {
+    try (Connection conn = Database.connect()) {
+        String query = "SELECT customer_id FROM customers WHERE user_id = ?";
+        PreparedStatement pstmt = conn.prepareStatement(query);
+        pstmt.setInt(1, userId);
+        ResultSet rs = pstmt.executeQuery();
+
+        if (rs.next()) {
+            return rs.getInt("customer_id");
+        } else {
+            System.err.println("❌ No customer found for user ID: " + userId);
+            return -1;
+        }
+    } catch (SQLException e) {
+        System.err.println("❌ Error getting customerId: " + e.getMessage());
+        return -1;
+    }
+}
+
   
 
    
@@ -734,7 +758,7 @@ public class CheckOutWindow {
    
     // Method to save order items to the database
 
-    public static void saveOrderItemsToDatabase(int orderId) {
+    public static void saveOrderItemsToDatabase(int orderId, int userId) {
         Map<Integer, Integer> cartItems = CartSession.getCartItems();
         Map<Integer, String> variations = CartSession.getVariations();
         Map<Integer, String> instructions = CartSession.getInstructions();
@@ -749,7 +773,7 @@ public class CheckOutWindow {
 
             // ✅ Open connection inside try-with-resources
             try (Connection conn = Database.connect()) {  
-                String query = "INSERT INTO order_items (order_id, item_id, quantity, subtotal, variation, instructions) VALUES (?, ?, ?, ?, ?, ?)";
+                String query = "INSERT INTO order_items (order_id, item_id, quantity, subtotal, variation, instructions, last_modified_by) VALUES (?, ?, ?, ?, ?, ?, ?)";
                 try (PreparedStatement stmt = conn.prepareStatement(query)) {
                     stmt.setInt(1, orderId);
                     stmt.setInt(2, itemId);
@@ -757,6 +781,7 @@ public class CheckOutWindow {
                     stmt.setDouble(4, subtotal);
                     stmt.setString(5, variationText);
                     stmt.setString(6, instructionsText);
+                    stmt.setInt(7, userId);
                     stmt.executeUpdate();
                 }
             } catch (SQLException e) {
@@ -767,7 +792,7 @@ public class CheckOutWindow {
 
 
 
-    public static int saveOrderToDatabase(int customerId, int addressId, double totalPrice, String paymentMethod, String orderType, String pickupTime) {
+    public static int saveOrderToDatabase(int customerId, int addressId, double totalPrice, String paymentMethod, String orderType, String pickupTime, int userId) {
      try (Connection conn = Database.connect()) {
 
          // Determine payment_status based on paymentMethod
@@ -785,8 +810,8 @@ public class CheckOutWindow {
          }
 
          // Build the SQL query
-         String sql = "INSERT INTO orders (customer_id, address_id, total_price, payment_method, payment_status, status, order_type, pickup_time) " +
-                      "VALUES (?, ?, ?, ?, ?, 'Pending', ?, ?)";
+         String sql = "INSERT INTO orders (customer_id, address_id, total_price, payment_method, payment_status, status, order_type, pickup_time, last_modified_by) " +
+                      "VALUES (?, ?, ?, ?, ?, 'Pending', ?, ?, ?)";
 
          // Prepare statement and set parameters
          PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
@@ -802,6 +827,7 @@ public class CheckOutWindow {
          } else {
              pstmt.setNull(7, java.sql.Types.NULL); // If it's delivery, set pickup time as NULL
          }
+         pstmt.setInt(8, userId);
 
          // Execute the update and get the generated order_id
          int affectedRows = pstmt.executeUpdate();
@@ -984,7 +1010,7 @@ private static void showAlert(String title, String message) {
  
  // Save address to database with barangay_id as a foreign key
     private static int saveAddressToDatabase(int customerId, String street,
-                                                String barangay, String addressType, boolean isDefault, String contactNumber) {
+                                                String barangay, String addressType, boolean isDefault, String contactNumber, int userId) {
         street = street.trim();
       try (Connection conn = Database.connect()) {
           // First, get barangay_id based on barangay name
@@ -1002,6 +1028,7 @@ private static void showAlert(String title, String message) {
               System.err.println("Invalid Barangay selected!");
               return -1; // Barangay not found
           }
+      
 
          // Check if the address already exists for this customer based on street and barangay
         String checkAddressQuery = "SELECT address_id FROM addresses WHERE customer_id = ? AND street = ? AND barangay_id = ?";
@@ -1016,13 +1043,14 @@ private static void showAlert(String title, String message) {
               // Address exists, so update the existing record
               int existingAddressId = rsCheck.getInt("address_id");
 
-              String updateAddressQuery = "UPDATE addresses SET barangay_id = ?, address_type = ?, is_default = ?, contact_number = ? WHERE address_id = ?";
+              String updateAddressQuery = "UPDATE addresses SET barangay_id = ?, address_type = ?, is_default = ?, contact_number = ?, last_modified_by = ? WHERE address_id = ?";
               PreparedStatement pstmtUpdate = conn.prepareStatement(updateAddressQuery);
               pstmtUpdate.setInt(1, barangayId);
               pstmtUpdate.setString(2, addressType);
               pstmtUpdate.setBoolean(3, isDefault);
               pstmtUpdate.setString(4, contactNumber);
-              pstmtUpdate.setInt(5, existingAddressId);
+              pstmtUpdate.setInt(5, userId);
+              pstmtUpdate.setInt(6, existingAddressId);
 
               int affectedRows = pstmtUpdate.executeUpdate();
               if (affectedRows > 0) {
@@ -1035,19 +1063,21 @@ private static void showAlert(String title, String message) {
               }
           } else {
               // Address does not exist, insert a new record
-              String insertAddressQuery = "INSERT INTO addresses (customer_id, street, barangay_id, address_type, is_default, contact_number) " +
-                                          "VALUES (?, ?, ?, ?, ?, ?)";
-              PreparedStatement pstmtInsert = conn.prepareStatement(insertAddressQuery);
+              String insertAddressQuery = "INSERT INTO addresses (customer_id, street, barangay_id, address_type, is_default, contact_number, last_modified_by) " +
+                                          "VALUES (?, ?, ?, ?, ?, ?, ?)";
+             PreparedStatement pstmtInsert = conn.prepareStatement(insertAddressQuery, Statement.RETURN_GENERATED_KEYS);
+
               pstmtInsert.setInt(1, customerId);
               pstmtInsert.setString(2, street);
               pstmtInsert.setInt(3, barangayId);
               pstmtInsert.setString(4, addressType);
               pstmtInsert.setBoolean(5, isDefault);
               pstmtInsert.setString(6, contactNumber);
+              pstmtInsert.setInt(7, userId);
 
               int affectedRows = pstmtInsert.executeUpdate();
                 ResultSet rsInsert = pstmtInsert.getGeneratedKeys();
-              if (affectedRows > 0) {
+              if (rsInsert.next()) {
                   int newAddressId = rsInsert.getInt(1); // Get the generated address_id
                     System.out.println("Address saved successfully!");
                     return newAddressId; // Return the generated address_id

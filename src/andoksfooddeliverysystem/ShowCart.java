@@ -47,8 +47,8 @@ public class ShowCart {
     static Label totalLabel;
 
      // ✅ Modify displayCart() to accept customerID
-    public static void displayCart(int customerID) {
-        System.out.println("✅ Opening Cart for User ID: " + customerID); // Debugging
+    public static void displayCart(int userID) {
+        System.out.println("✅ Opening Cart for User ID: " + userID); // Debugging
 
         
         cartStage = new Stage();
@@ -249,7 +249,7 @@ public class ShowCart {
         Button reviewPaymentBtn = new Button("Review Payment & Address");
         reviewPaymentBtn.setOnAction(e -> {
             CheckOutWindow.displayCheckout(
-                customerID,
+                userID,
                 CartSession.getCartItems(),
                 CartSession.getVariations(),  // ✅ Added variations
                 CartSession.getInstructions() // ✅ Added instructions

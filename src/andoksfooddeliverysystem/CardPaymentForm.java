@@ -40,7 +40,7 @@ public class CardPaymentForm {
     this.onPaymentSuccess = callback;
 }
     
-    public void showCardPaymentForm(int customerId) {
+    public void showCardPaymentForm(int customerId, int userId) {
     Stage cardStage = new Stage();
     cardStage.initStyle(StageStyle.UNDECORATED);
     cardStage.initModality(Modality.APPLICATION_MODAL);
@@ -273,7 +273,7 @@ public class CardPaymentForm {
             PauseTransition pause = new PauseTransition(Duration.seconds(1.5));
             pause.setOnFinished(event -> {
                 if (saveCard) {
-                    saveCardDetails(customerId, cardNumber, expiryDate, cvc, cardholderName);
+                    saveCardDetails(customerId, cardNumber, expiryDate, cvc, cardholderName, userId);
                 }
                 processPayment(cardNumber, expiryDate, cvc, cardholderName, saveCard);
                 
@@ -452,10 +452,10 @@ private static class Delta {
     double x, y;
 }
 
-    public void saveCardDetails(int customerId, String cardNumber, String expiryDate, String cvc, String cardholderName) {
+    public void saveCardDetails(int customerId, String cardNumber, String expiryDate, String cvc, String cardholderName, int userId) {
         // Example: Use your database connection logic to save the card info
-        String query = "INSERT INTO saved_cards (customer_id, card_number, expiry_date, cvc, cardholder_name, is_saved) " +
-                       "VALUES (?, ?, ?, ?, ?, ?)";
+        String query = "INSERT INTO saved_cards (customer_id, card_number, expiry_date, cvc, cardholder_name, is_saved, last_modified_by) " +
+                       "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = Database.connect();
             PreparedStatement stmt = conn.prepareStatement(query)){
@@ -465,6 +465,7 @@ private static class Delta {
             stmt.setString(4, cvc);
             stmt.setString(5, cardholderName);
             stmt.setBoolean(6, true);  // Card saved for future use
+            stmt.setInt(7, userId);
             stmt.executeUpdate();
             System.out.println("Card saved successfully");
         } catch (SQLException e) {

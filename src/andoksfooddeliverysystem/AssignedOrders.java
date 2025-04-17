@@ -684,7 +684,7 @@ public class AssignedOrders {
 
     // Method to upload proof of delivery (image)
 public void uploadProofOfDelivery(Order order, String imagePath, int userId) {
-    String query = "UPDATE orders SET proof_of_delivery_image_path = ?, updated_by = ? WHERE order_id = ?";
+    String query = "UPDATE orders SET proof_of_delivery_image_path = ?, last_modified_by = ? WHERE order_id = ?";
 
     
     try (Connection conn = Database.connect();
@@ -705,7 +705,7 @@ public void uploadProofOfDelivery(Order order, String imagePath, int userId) {
     
     // Method to mark the order as picked up in the database
         private void markOrderCompleted(Order order, int userId) {
-            String updateQuery = "UPDATE orders SET status = 'Completed' , updated_by = ? WHERE order_id = ?";
+            String updateQuery = "UPDATE orders SET status = 'Completed' , last_modified_by = ? WHERE order_id = ?";
        
 
 

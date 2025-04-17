@@ -21,15 +21,19 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Comparator;
 
 import java.util.Optional;
 import java.util.Random;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -39,9 +43,11 @@ import javax.swing.JOptionPane;
 
 public class RiderManagement {
     private VBox root;
+       private int adminId; // the logged-in admin's ID
 
-    public RiderManagement() {
-        
+
+    public RiderManagement(int adminId) {
+          this.adminId = adminId;
     root = new VBox(20); // Adjusted spacing
     root.setPadding(new Insets(20));
     root.setPrefSize(600, 400); // Set preferred size
@@ -103,7 +109,8 @@ public class RiderManagement {
     }
 
     // Database Operations
-    try (Connection conn = Database.connect()) {
+   // Database Operations
+try (Connection conn = Database.connect()) {
     conn.setAutoCommit(false); // Start transaction
 
     // Check if the rider already exists
@@ -128,15 +135,22 @@ public class RiderManagement {
                 if (result.isPresent()) {
                     if (result.get() == updateButton) {
                         // Update existing rider
-                        String updateSql = "UPDATE riders SET name = ?, contact_number = ?, imagePath = ? WHERE rider_id = ?";
+                        String updateSql = "UPDATE riders SET name = ?, contact_number = ?, imagePath = ?, last_modified_by = ? WHERE rider_id = ?";
                         try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
                             updateStmt.setString(1, name);
                             updateStmt.setString(2, contact);
                             updateStmt.setString(3, imagePath);
-                            updateStmt.setInt(4, existingId);
-                            updateStmt.executeUpdate();
+                            updateStmt.setInt(4, adminId); // last_modified_by
+                            updateStmt.setInt(5, existingId); // rider_id
+                            
+                            // Execute the update
+                            int rowsUpdated = updateStmt.executeUpdate();
+                            if (rowsUpdated > 0) {
+                                JOptionPane.showMessageDialog(null, "Rider details updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                            } else {
+                                JOptionPane.showMessageDialog(null, "No updates were made. Please verify the input.", "No Changes", JOptionPane.INFORMATION_MESSAGE);
+                            }
                         }
-                        JOptionPane.showMessageDialog(null, "Rider details updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
                     } else if (result.get() == insertNewButton) {
                         // Insert a new rider entry
                         insertNewRider(conn, name + " (New)", contact, imagePath);
@@ -148,12 +162,32 @@ public class RiderManagement {
             }
         }
     }
+
+    // Commit the transaction after operations are done
+    conn.commit();
 } catch (SQLException ex) {
     ex.printStackTrace();
     JOptionPane.showMessageDialog(null, "Error processing rider data!", "Error", JOptionPane.ERROR_MESSAGE);
+  
 }
 
 });
+      //===
+    TextField searchField = new TextField();
+    searchField.setPromptText("Search...");
+
+    Button sortAZ = new Button("Sort A-Z");
+    Button sortZA = new Button("Sort Z-A");
+    
+    ComboBox<String> categoryFilter = new ComboBox<>();
+    categoryFilter.getItems().addAll("All", "Available", "Delivering", "Online", "Offline");
+    categoryFilter.setValue("All");
+
+ 
+
+    HBox topBar = new HBox(10, searchField, categoryFilter, sortAZ, sortZA);
+    topBar.setPadding(new Insets(10));
+
    
      // ====== TABLEVIEW  ======
          TableView<RiderManagement.RidersList> tableView = new TableView<>();
@@ -171,31 +205,86 @@ public class RiderManagement {
         imageColumn.setCellValueFactory(new PropertyValueFactory<>("imagePath"));
         imageColumn.setPrefWidth(100);
         
-        
+        TableColumn<RiderManagement.RidersList, String> statusColumn = new TableColumn<>("Status");
+        statusColumn.setCellValueFactory(new PropertyValueFactory<>("status"));
+        statusColumn.setPrefWidth(100);
 
-        tableView.getColumns().addAll(nameColumn, contactColumn, imageColumn);
+        TableColumn<RiderManagement.RidersList, String> onlineStatusColumn = new TableColumn<>("Online Status");
+        onlineStatusColumn.setCellValueFactory(new PropertyValueFactory<>("onlineStatus"));
+        onlineStatusColumn.setPrefWidth(100);  // Adjust width for better visibility
+
+
+        tableView.getColumns().addAll(nameColumn, contactColumn, imageColumn, statusColumn, onlineStatusColumn);
 
         // ✅ Corrected ObservableList
         ObservableList<RiderManagement.RidersList> riderData = FXCollections.observableArrayList();
+        FilteredList<RiderManagement.RidersList> filteredData = new FilteredList<>(riderData, p -> true);
+        searchField.textProperty().addListener((observable, oldValue, newValue) -> {
+        filteredData.setPredicate(rider -> {
+            if (newValue == null || newValue.isEmpty()) return true;
+            String lowerCaseFilter = newValue.toLowerCase();
+            return rider.getName().toLowerCase().contains(lowerCaseFilter)
+                || rider.getContact().toLowerCase().contains(lowerCaseFilter)
+                || rider.getStatus().toLowerCase().contains(lowerCaseFilter)
+                || rider.getOnlineStatus().toLowerCase().contains(lowerCaseFilter);
+        });
+    });
+        
+           categoryFilter.setOnAction(e -> {
+        String selected = categoryFilter.getValue().toLowerCase();
+        filteredData.setPredicate(rider -> {
+            if (selected.equals("all")) return true;
+            return rider.getStatus().toLowerCase().contains(selected) || 
+                   rider.getOnlineStatus().toLowerCase().contains(selected);
+        });
+    });
+
+        searchField.textProperty().addListener((observable, oldValue, newValue) -> {
+            updateFilter(filteredData, searchField.getText(), categoryFilter.getValue());
+        });
+
+        categoryFilter.setOnAction(e -> {
+            updateFilter(filteredData, searchField.getText(), categoryFilter.getValue());
+        });
+
+        
+       // ✅ Wrap FilteredList with SortedList first
+        SortedList<RiderManagement.RidersList> sortedData = new SortedList<>(filteredData);
+        sortedData.comparatorProperty().bind(tableView.comparatorProperty());
+        tableView.setItems(sortedData);  // 👈 This should stay as is
+
+        sortAZ.setOnAction(e -> {
+          // Unbind so you can sort manually
+          tableView.getSortOrder().clear(); 
+          nameColumn.setSortType(TableColumn.SortType.ASCENDING);
+          tableView.getSortOrder().add(nameColumn);
+      });
+
+      sortZA.setOnAction(e -> {
+          tableView.getSortOrder().clear(); 
+          nameColumn.setSortType(TableColumn.SortType.DESCENDING);
+          tableView.getSortOrder().add(nameColumn);
+      });
+
 
         try (Connection conn = Database.connect()) {
-            String sql = "SELECT name, contact_number, imagePath FROM riders"; // Ensure column names match DB
+            String sql = "SELECT name, contact_number, imagePath, status, online_status FROM riders"; // Ensure column names match DB
             PreparedStatement stmt = conn.prepareStatement(sql);
             ResultSet rs = stmt.executeQuery();
 
             while (rs.next()) {
                 String name = rs.getString("name");
                 String contact = rs.getString("contact_number");
-                String imagePath = rs.getString("imagePath"); 
+                String imagePath = rs.getString("imagePath");
+               String status = rs.getString("status");
+                String onlineStatus = rs.getString("online_status");
 
-                riderData.add(new RiderManagement.RidersList(name, contact, imagePath));
+                riderData.add(new RiderManagement.RidersList(name, contact, imagePath, status, onlineStatus));
             }
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
 
-        tableView.setItems(riderData); // ✅ Set data to the table
-        
         // Update selection event
    tableView.setOnMouseClicked(event -> {
         if (event.getClickCount() == 2 && !tableView.getSelectionModel().isEmpty()) {
@@ -289,16 +378,42 @@ public class RiderManagement {
         formPane.getChildren().addAll(nameLabel, nameField, contactLabel, contactField, imageLabel, imageView, uploadButton, saveButton, deleteButton);
 
     
+          VBox searchTableView = new VBox(10); // VBox to stack search bar and table with spacing
+    searchTableView.getChildren().addAll(topBar, tableView);
+
+    // Add formPane and tableView to mainPane
+    
+   
+    
          // ✅ Organize layout
     HBox mainPane = new HBox(20);
-    mainPane.getChildren().addAll(formPane, tableView);
+    mainPane.getChildren().addAll(formPane, searchTableView);
     root.getChildren().add(mainPane);
     root.setStyle("-fx-background-color: #f4f4f4;");
     }
 
+    
+    private void updateFilter(FilteredList<RiderManagement.RidersList> filteredData, String searchText, String category) {
+    filteredData.setPredicate(rider -> {
+        boolean matchesSearch = (searchText == null || searchText.isEmpty()) || 
+            rider.getName().toLowerCase().contains(searchText.toLowerCase()) ||
+            rider.getContact().toLowerCase().contains(searchText.toLowerCase()) ||
+            rider.getStatus().toLowerCase().contains(searchText.toLowerCase()) ||
+            rider.getOnlineStatus().toLowerCase().contains(searchText.toLowerCase());
+
+        boolean matchesCategory = category.equalsIgnoreCase("all") ||
+            rider.getStatus().toLowerCase().contains(category.toLowerCase()) ||
+            rider.getOnlineStatus().toLowerCase().contains(category.toLowerCase());
+
+        return matchesSearch && matchesCategory;
+    });
+}
+
+    
     private void insertNewRider(Connection conn, String name, String contact, String imagePath) throws SQLException {
-        String userSql = "INSERT INTO Users (full_name, email, password, role) VALUES (?, ?, ?, 'Rider')";
-        String riderSql = "INSERT INTO Riders (user_id, name, contact_number, imagePath) VALUES (?, ?, ?, ?)";
+        String userSql = "INSERT INTO Users (full_name, email, password, role, last_modified_by) VALUES (?, ?, ?, 'Rider', ?)";
+
+        String riderSql = "INSERT INTO Riders (user_id, name, contact_number, imagePath, last_modified_by) VALUES (?, ?, ?, ?, ?)";
 
         try (PreparedStatement userStmt = conn.prepareStatement(userSql, Statement.RETURN_GENERATED_KEYS);
              PreparedStatement riderStmt = conn.prepareStatement(riderSql)) {
@@ -311,6 +426,7 @@ public class RiderManagement {
             userStmt.setString(1, name);
             userStmt.setString(2, defaultUsername + "@riders.com"); // Temporary email
             userStmt.setString(3, defaultPassword); // Store hashed password
+            userStmt.setInt(4, adminId);
             int userRows = userStmt.executeUpdate();
 
             // Get generated user_id
@@ -326,6 +442,7 @@ public class RiderManagement {
                 riderStmt.setString(2, name);
                 riderStmt.setString(3, contact);
                 riderStmt.setString(4, imagePath);
+                riderStmt.setInt(5, adminId); // 
                 int riderRows = riderStmt.executeUpdate();
 
                 if (riderRows > 0) {
@@ -362,17 +479,38 @@ public class RiderManagement {
    
     private String contact;
     private String imagePath; // NEW!
+    private String status;
+    private String onlineStatus;
+    
 
-    public RidersList(String name, String contact, String imagePath) {
+    public RidersList(String name, String contact, String imagePath, String status, String onlineStatus) {
         this.name = name;
         
         this.contact = contact;
         this.imagePath = imagePath;
+        this.status = status;
+        this.onlineStatus = onlineStatus;
     }
 
     public String getName() { return name; }
     public String getContact() { return contact; }
     public String getImagePath() { return imagePath; }
+    
+      public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getOnlineStatus() {
+        return onlineStatus;
+    }
+
+    public void setOnlineStatus(String onlineStatus) {
+        this.onlineStatus = onlineStatus;
+    }
 }
 
 

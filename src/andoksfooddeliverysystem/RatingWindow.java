@@ -35,7 +35,7 @@ public class RatingWindow {
     private int foodRatingValue = 0;
     private int deliveryRatingValue = 0;
     
-    public RatingWindow(Order order) {
+    public RatingWindow(Order order, int userId) {
         Stage ratingStage = new Stage();
         ratingStage.setTitle("Andok's - Rate Your Order");
         ratingStage.initStyle(StageStyle.DECORATED);
@@ -120,7 +120,7 @@ public class RatingWindow {
                 }
                 
                 String deliveryText = finalDeliveryReview.getText().trim();
-                success = saveRatingToDB(order.getOrderId(), foodRatingValue, foodText, deliveryRatingValue, deliveryText);
+                success = saveRatingToDB(order.getOrderId(), foodRatingValue, foodText, deliveryRatingValue, deliveryText, userId);
             }
             
             if (success) {
@@ -602,66 +602,26 @@ public class RatingWindow {
     }
 }
 
-    private boolean saveRatingToDB(int orderId, int foodRating, String foodReview, int deliveryRating, String deliveryReview) {
-    String insertSql = "INSERT INTO ratings (order_id, food_rating, food_review, delivery_rating, delivery_review) VALUES (?, ?, ?, ?, ?)";
-    String riderUpdateSql = """
-        UPDATE riders
-        SET 
-            average_rating = (
-                SELECT AVG(rt.delivery_rating)
-                FROM `orders` o
-                JOIN ratings rt ON o.order_id = rt.order_id
-                WHERE o.rider_id = riders.rider_id
-            ),
-            total_reviews = (
-                SELECT COUNT(rt.delivery_rating)
-                FROM `orders` o
-                JOIN ratings rt ON o.order_id = rt.order_id
-                WHERE o.rider_id = riders.rider_id
-            )
-        WHERE riders.rider_id = (
-            SELECT rider_id FROM `orders` WHERE order_id = ?
-        )
-        """;
+    private boolean saveRatingToDB(int orderId, int foodRating, String foodReview, int deliveryRating, String deliveryReview, int userId) {
+    String insertSql = "INSERT INTO ratings (order_id, food_rating, food_review, delivery_rating, delivery_review, last_modified_by) VALUES (?, ?, ?, ?, ?, ?)";
 
-    try (Connection conn = Database.connect()) {
-        conn.setAutoCommit(false); // Ensure atomic operation
+try (Connection conn = Database.connect();
+     PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
 
-        try (
-            PreparedStatement insertStmt = conn.prepareStatement(insertSql);
-            PreparedStatement updateStmt = conn.prepareStatement(riderUpdateSql)
-        ) {
-            // Insert the rating
-            insertStmt.setInt(1, orderId);
-            insertStmt.setInt(2, foodRating);
-            insertStmt.setString(3, foodReview);
-            insertStmt.setInt(4, deliveryRating);
-            insertStmt.setString(5, deliveryReview);
+    insertStmt.setInt(1, orderId);
+    insertStmt.setInt(2, foodRating);
+    insertStmt.setString(3, foodReview);
+    insertStmt.setInt(4, deliveryRating);
+    insertStmt.setString(5, deliveryReview);
+    insertStmt.setInt(6, userId); // 👉 track who submitted it
 
-            int rows = insertStmt.executeUpdate();
+    return insertStmt.executeUpdate() > 0;
 
-            if (rows > 0) {
-                // Update the rider's rating and review count
-                updateStmt.setInt(1, orderId);
-                updateStmt.executeUpdate();
+} catch (Exception e) {
+    e.printStackTrace();
+    return false;
+}
 
-                conn.commit();
-                return true;
-            } else {
-                conn.rollback();
-                return false;
-            }
-
-        } catch (Exception e) {
-            conn.rollback();
-            e.printStackTrace();
-            return false;
-        }
-
-    } catch (Exception e) {
-        e.printStackTrace();
-        return false;
-    }
 }
 
 

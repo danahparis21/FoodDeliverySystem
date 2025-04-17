@@ -35,10 +35,11 @@ public class CustomerProfile {
     private VBox sidebar;
     private Stage dashboardStage;  // 👈 this will store the dashboard window
         private ImageView profileImage; 
+        private int userID;
         
-      public  void show(Stage owner, Customer customer) {
+      public  void show(Stage owner, Customer customer, int userID) {
          this.dashboardStage = owner; // ✅ save it to use on logout
-
+         this.userID = userID;
              
         Stage profileStage = new Stage();
         profileStage.setTitle("Customer Profile");
@@ -96,7 +97,7 @@ profileImage.setOnMouseClicked(e -> {
             profileImage.setImage(newImage);
 
             // Update the database with the absolute path
-            updateCustomerImage(customer.getCustomerId(), absolutePath);  // Save the path in the DB
+            updateCustomerImage(customer.getCustomerId(), absolutePath, userID);  // Save the path in the DB
             customer.setCustomerImage(absolutePath);  // Set the customer image path
 
         } catch (IOException ex) {
@@ -119,7 +120,7 @@ profileImage.setOnMouseClicked(e -> {
             nameField.setOnAction(e -> {
                 String newName = nameField.getText();
                 customer.setName(newName);
-                updateCustomerName(customer.getCustomerId(), newName);
+                updateCustomerName(customer.getCustomerId(), newName, userID);
                 sidebar.getChildren().set(sidebar.getChildren().indexOf(nameField), nameLabel);
                 nameLabel.setText(newName);
             });
@@ -215,7 +216,7 @@ profileImage.setOnMouseClicked(e -> {
 
                         if (selectedOrderDetails != null) {
                              OrderSummary orderSummary = new OrderSummary();
-                            orderSummary.show(selectedOrderDetails);
+                            orderSummary.show(selectedOrderDetails, userID);
                         }
                     }
                 }
@@ -299,27 +300,30 @@ profileImage.setOnMouseClicked(e -> {
 
 
       
-      public static void updateCustomerImage(int customerId, String imagePath) {
-    String query = "UPDATE customers SET customer_image = ? WHERE customer_id = ?";
+public static void updateCustomerImage(int customerId, String imagePath, int userId) {
+    String query = "UPDATE customers SET customer_image = ?, last_modified_by = ? WHERE customer_id = ?";
     try (Connection conn = Database.connect(); PreparedStatement stmt = conn.prepareStatement(query)) {
         stmt.setString(1, imagePath);
-        stmt.setInt(2, customerId);
+        stmt.setInt(2, userId);
+        stmt.setInt(3, customerId);
         stmt.executeUpdate();
     } catch (SQLException e) {
         e.printStackTrace();
     }
 }
 
-public static void updateCustomerName(int customerId, String name) {
-    String query = "UPDATE customers SET name = ? WHERE customer_id = ?";
+public static void updateCustomerName(int customerId, String name, int userId) {
+    String query = "UPDATE customers SET name = ?, last_modified_by = ? WHERE customer_id = ?";
     try (Connection conn = Database.connect(); PreparedStatement stmt = conn.prepareStatement(query)) {
         stmt.setString(1, name);
-        stmt.setInt(2, customerId);
+        stmt.setInt(2, userId);
+        stmt.setInt(3, customerId);
         stmt.executeUpdate();
     } catch (SQLException e) {
         e.printStackTrace();
     }
 }
+
 
 
 
@@ -362,7 +366,7 @@ public static void updateCustomerName(int customerId, String name) {
                     int orderId = extractOrderId(selected);
                     Order order = OrderFetcher.getOrderById(orderId);
                     OrderSummary summary = new OrderSummary();
-                    summary.show(order);
+                    summary.show(order, userID);
 
                 }
             }

@@ -127,7 +127,7 @@ public class CustomerDashboard extends Application {
             if (customer != null) {
                 
                 CustomerProfile profile = new CustomerProfile();
-                profile.show(primaryStage, customer); // ← perfect!
+                profile.show(primaryStage, customer, userID); // ← perfect!
 
             } else {
                 System.out.println("⚠️ No customer found for user ID " + userID);
@@ -240,25 +240,25 @@ public class CustomerDashboard extends Application {
 private void loadCategoryItems(int categoryId) {
     menuGrid.getChildren().clear();
     System.out.println("Loading items for category ID: " + categoryId);
-    
-    String query = "SELECT * FROM menu_items WHERE category_id = ?";
-    
+
+    // Only load items that are marked as 'Available'
+    String query = "SELECT * FROM menu_items WHERE category_id = ? AND availability = 'Available'";
+
     try (Connection conn = Database.connect();
          PreparedStatement stmt = conn.prepareStatement(query)) {
-         
+
         stmt.setInt(1, categoryId);
         ResultSet rs = stmt.executeQuery();
 
         int row = 0, col = 0;
         while (rs.next()) {
-            String itemName = rs.getString("name"); // Adjusted column name
+            String itemName = rs.getString("name");
             String imagePath = rs.getString("image_path");
-            double price = rs.getDouble("price"); // Get the price from the database
-            
-            
+            double price = rs.getDouble("price");
+
             VBox itemBox = createMenuItemBox(itemName, imagePath, price);
             menuGrid.add(itemBox, col, row);
-            
+
             col++;
             if (col > 2) { // 3 columns per row
                 col = 0;
@@ -270,6 +270,7 @@ private void loadCategoryItems(int categoryId) {
         e.printStackTrace();
     }
 }
+
 
   
 

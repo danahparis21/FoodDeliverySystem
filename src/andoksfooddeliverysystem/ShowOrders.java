@@ -768,7 +768,7 @@ public class ShowOrders {
     String newStatus = "Ready for Pick-up"; // Define status for pickup
 
    
-    String updateQuery = "UPDATE orders SET status = ?, updated_by = ? WHERE order_id = ?";
+    String updateQuery = "UPDATE orders SET status = ?, last_modified_by = ? WHERE order_id = ?";
 
 
     try (Connection connection = Database.connect(); 
@@ -807,7 +807,7 @@ public class ShowOrders {
             newStatus = "Out for Delivery"; // delivery = still needs delivery
         }
 
-        String updateQuery = "UPDATE orders SET status = ?, updated_by = ? WHERE order_id = ?";
+        String updateQuery = "UPDATE orders SET status = ?, last_modified_by = ? WHERE order_id = ?";
 
 
         try (Connection connection = Database.connect(); 
@@ -883,7 +883,7 @@ public class ShowOrders {
         
         Connection connection = connect();
 
-        String updateQuery = "UPDATE orders SET rider_id = ?, updated_by = ? WHERE order_id = ?";
+        String updateQuery = "UPDATE orders SET rider_id = ?, last_modified_by = ? WHERE order_id = ?";
        
 
 

@@ -154,7 +154,7 @@ public class OrderFetcher {
                             "FROM orders o " +
                             "INNER JOIN addresses a ON o.address_id = a.address_id " +
                             "INNER JOIN barangay b ON a.barangay_id = b.barangay_id " +
-                            "INNER JOIN customers c ON c.customer_id = c.customer_id" +
+                            "INNER JOIN customers c ON o.customer_id = c.customer_id " +
                             "WHERE o.customer_id = ?"; // Fetch orders only for the given customer
 
         // SQL query to fetch items for a specific order

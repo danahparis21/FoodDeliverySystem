@@ -1,5 +1,6 @@
 package andoksfooddeliverysystem;
 
+import com.mysql.cj.Session;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -20,7 +21,7 @@ public class OrderSummary{
     private String currentGifPath = null;
 
 
-    public void show(Order order) {
+    public void show(Order order, int userId) {
         Stage stage = new Stage();
         stage.setTitle("Order Summary - Order #" + order.getOrderId());
 
@@ -87,7 +88,7 @@ public class OrderSummary{
             Button rateButton = new Button("⭐ Rate Order");
             rateButton.setStyle("-fx-font-size: 14px; -fx-padding: 6 12;");
 
-              rateButton.setOnAction(e -> new RatingWindow(order)); // ✅ correct
+              rateButton.setOnAction(e -> new RatingWindow(order, userId)); // ✅ correct
 
             refreshBox.getChildren().add(rateButton);
             }
@@ -139,7 +140,7 @@ public class OrderSummary{
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to cancel this order?", ButtonType.YES, ButtonType.NO);
         alert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.YES) {
-                boolean success = cancelOrder(order.getOrderId());
+                boolean success = cancelOrder(order.getOrderId(), userId);
 
                 if (success) {
                     cancelButton.setDisable(true);
@@ -190,7 +191,7 @@ public class OrderSummary{
         if ("Completed".equalsIgnoreCase(updatedOrder.getOrderStatus().trim())) {
             Button rateButton = new Button("⭐ Rate Order");
             rateButton.setStyle("-fx-font-size: 14px; -fx-padding: 6 12;");
-            rateButton.setOnAction(ev -> new RatingWindow(updatedOrder));
+            rateButton.setOnAction(ev -> new RatingWindow(updatedOrder, userId));
             refreshBox.getChildren().add(rateButton);
         }
         // Disable Cancel button if not Pending
@@ -237,13 +238,14 @@ public class OrderSummary{
 //    autoRefresh.setCycleCount(Animation.INDEFINITE); // loop forever
 //    autoRefresh.play(); // start it
 
-    private boolean cancelOrder(int orderId) {
-        String updateQuery = "UPDATE orders SET status = 'Cancelled', payment_status = 'Cancelled' WHERE order_id = ?";
+    private boolean cancelOrder(int orderId, int userId) {
+        String updateQuery = "UPDATE orders SET status = 'Cancelled', payment_status = 'Cancelled', last_modified_by = ? WHERE order_id = ?";
 
         try (Connection connection = Database.connect();
              PreparedStatement statement = connection.prepareStatement(updateQuery)) {
 
-            statement.setInt(1, orderId);
+            statement.setInt(1, userId); // 👈 set the updater here
+            statement.setInt(2, orderId);
             int rowsUpdated = statement.executeUpdate();
 
             return rowsUpdated > 0;
