@@ -135,7 +135,6 @@ public class CustomerDashboard extends Application {
 });
 
 
-
         topBar.getChildren().addAll(searchField, notifBtn, cartButtonPane, profileBtn);
         return topBar;
     }

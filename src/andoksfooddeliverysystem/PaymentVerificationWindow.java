@@ -95,6 +95,7 @@ public class PaymentVerificationWindow {
    
    private static void updateOrderStatus(int orderId, String newStatus) {
     String updateQuery = "UPDATE orders SET status = ? WHERE order_id = ?";
+    
     try (Connection connection = Database.connect(); 
          PreparedStatement preparedStatement = connection.prepareStatement(updateQuery)) {
 

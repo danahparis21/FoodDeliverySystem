@@ -46,6 +46,7 @@ import javafx.scene.control.ListView;
 import javafx.util.Duration;
 
 public class AdminDashboard extends Application {
+    private int userID;
     private VBox sidebar;
     private BorderPane mainLayout;
     private boolean sidebarVisible = true;
@@ -53,8 +54,15 @@ public class AdminDashboard extends Application {
     ListView<String> variationList;
 
 
+    public AdminDashboard(int userID) {
+        this.userID = userID;
+        System.out.println("✅ AdminDashboard opened with User ID: " + userID); // Debugging
+    }
+    
     @Override
     public void start(Stage primaryStage) {
+        
+        
         mainLayout = new BorderPane();
         mainContent = new VBox();
         mainContent.setPadding(new Insets(20));
@@ -112,7 +120,7 @@ private void showRiderManagement() {
         mainContent.getChildren().clear();
         System.out.println("Switching to orders");
 
-        ShowOrders showOrders = new ShowOrders();
+        ShowOrders showOrders = new ShowOrders(userID);
         Node riderUI = showOrders.getRoot();
 
         if (riderUI == null) {

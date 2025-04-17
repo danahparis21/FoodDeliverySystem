@@ -45,7 +45,7 @@ public class Rider {
     // Override toString() method to display rider info
     @Override
     public String toString() {
-        return name + " - Assigned orders: " + assignedOrders;
+        return name + " - Pending Assigned Orders: " + assignedOrders;
     }
 }
 

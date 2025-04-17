@@ -123,7 +123,7 @@ public class User {
 
             // Open appropriate dashboard
             if (role.equals("admin")) {
-                new AdminDashboard().start(new Stage());
+                new AdminDashboard(userID).start(new Stage());
             } else if (role.equals("customer")) {
                  new CustomerDashboard(userID).start(new Stage()); 
             }

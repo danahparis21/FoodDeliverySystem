@@ -13,15 +13,16 @@ public class OrderFetcher {
         List<Order> orders = new ArrayList<>();
         
         // SQL query to fetch orders and their associated address information
-        String orderQuery = "SELECT o.*, a.street, b.barangay_name, a.contact_number " +
-                            "FROM orders o " +
-                            "JOIN addresses a ON o.address_id = a.address_id " +
-                            "JOIN barangay b ON a.barangay_id = b.barangay_id"; // Fetch order and address details
+        String orderQuery = "SELECT o.*, a.street, b.barangay_name, a.contact_number, c.name AS customer_name\n" +
+                            "FROM orders o\n" +
+                            "INNER JOIN addresses a ON o.address_id = a.address_id\n" +
+                            "INNER JOIN barangay b ON a.barangay_id = b.barangay_id\n" +
+                            "INNER JOIN customers c ON o.customer_id = c.customer_id"; // Fetch order and address details
         
         // SQL query to fetch items for a specific order
         String itemQuery = "SELECT oi.*, i.* \n" +
                 "FROM order_items oi\n" +
-                "JOIN menu_items i ON oi.item_id = i.item_id\n" +
+                "INNER JOIN menu_items i ON oi.item_id = i.item_id\n" +
                 "WHERE oi.order_id = ?"; 
 
         try (Connection conn = Database.connect();
@@ -42,6 +43,7 @@ public class OrderFetcher {
                 String paymentStatus = orderResultSet.getString("payment_status");
                 String pickupTime = orderResultSet.getString("pickup_time");
                 String proofOfPaymentImage = orderResultSet.getString("payment_proof_path");
+                String customerName = orderResultSet.getString("customer_name");
 
 
                 // Now fetch the items for this order
@@ -63,7 +65,7 @@ public class OrderFetcher {
 
                 // Create the Order object with the actual address details
                 orders.add(new Order(orderId, totalPrice, orderDate, street, barangay, items, contactNumber, orderStatus, imagePath, orderType, paymentMethod, 
-                        paymentStatus, pickupTime, proofOfPaymentImage));
+                        paymentStatus, pickupTime, proofOfPaymentImage, customerName));
 
             }
 
@@ -74,15 +76,16 @@ public class OrderFetcher {
     }
     public static List<Order> fetchOrdersByRider(int riderId) {
     List<Order> orders = new ArrayList<>();
-    String query = "SELECT  o.*, a.street, b.barangay_name, a.contact_number " +
-                   "FROM orders o " +
-                   "JOIN addresses a ON o.address_id = a.address_id " +
-                   "JOIN barangay b ON a.barangay_id = b.barangay_id " +
-                   "WHERE o.rider_id = ?"; // Fetch orders for a specific rider
+    String query = "SELECT o.*, a.street, b.barangay_name, a.contact_number, c.name AS customer_name\n" +
+                    "FROM orders o\n" +
+                    "INNER JOIN addresses a ON o.address_id = a.address_id\n" +
+                    "INNER JOIN barangay b ON a.barangay_id = b.barangay_id\n" +
+                    "INNER JOIN customers c ON o.customer_id = c.customer_id\n" +
+                    "WHERE o.rider_id = ?"; // Fetch orders for a specific rider
 
     // SQL query to fetch items for a specific order
     String itemQuery = "SELECT oi.*, i.* FROM order_items oi " +
-                       "JOIN menu_items i ON oi.item_id = i.item_id " +
+                       "INNER JOIN menu_items i ON oi.item_id = i.item_id " +
                        "WHERE oi.order_id = ?"; 
 
     try (Connection conn = Database.connect();
@@ -104,7 +107,9 @@ public class OrderFetcher {
             String paymentMethod = orderResultSet.getString("payment_method");
             String paymentStatus = orderResultSet.getString("payment_status");
             String pickupTime = orderResultSet.getString("pickup_time");
-             String proofOfPaymentImage = orderResultSet.getString("payment_proof_path");
+            String proofOfPaymentImage = orderResultSet.getString("payment_proof_path");
+            String customerName = orderResultSet.getString("customer_name");
+
 
 
              
@@ -128,7 +133,7 @@ public class OrderFetcher {
 
             // Create the Order object with the address details and order items
             Order order = new Order(orderId, totalPrice, orderDate, street, barangay, orderItems, contactNumber, 
-                    orderStatus, imagePath, orderType, paymentMethod, paymentStatus, pickupTime, proofOfPaymentImage);
+                    orderStatus, imagePath, orderType, paymentMethod, paymentStatus, pickupTime, proofOfPaymentImage, customerName);
 
             // Add order to the list
             orders.add(order);
@@ -145,16 +150,17 @@ public class OrderFetcher {
         List<Order> orders = new ArrayList<>();
 
         // SQL query to fetch orders and their associated address information for a specific customer
-        String orderQuery = "SELECT o.*, a.street, b.barangay_name, a.contact_number " +
+        String orderQuery = "SELECT o.*, a.street, b.barangay_name, a.contact_number, c.name AS customer_name " +
                             "FROM orders o " +
-                            "JOIN addresses a ON o.address_id = a.address_id " +
-                            "JOIN barangay b ON a.barangay_id = b.barangay_id " +
+                            "INNER JOIN addresses a ON o.address_id = a.address_id " +
+                            "INNER JOIN barangay b ON a.barangay_id = b.barangay_id " +
+                            "INNER JOIN customers c ON c.customer_id = c.customer_id" +
                             "WHERE o.customer_id = ?"; // Fetch orders only for the given customer
 
         // SQL query to fetch items for a specific order
         String itemQuery = "SELECT oi.*, i.* \n" +
                 "FROM order_items oi\n" +
-                "JOIN menu_items i ON oi.item_id = i.item_id\n" +
+                "INNER JOIN menu_items i ON oi.item_id = i.item_id\n" +
                 "WHERE oi.order_id = ?"; 
 
         try (Connection conn = Database.connect();
@@ -177,6 +183,7 @@ public class OrderFetcher {
                 String paymentStatus = orderResultSet.getString("payment_status");
                 String pickupTime = orderResultSet.getString("pickup_time");
                 String proofOfPaymentImage = orderResultSet.getString("payment_proof_path");
+                String customerName = orderResultSet.getString("customer_name");
 
                 // Now fetch the items for this order
                 List<DetailedOrderItem> items = new ArrayList<>();
@@ -199,7 +206,7 @@ public class OrderFetcher {
                 
                 // Create the Order object with the actual address details
                 orders.add(new Order(orderId, totalPrice, orderDate, street, barangay, items, contactNumber, orderStatus, imagePath, orderType, paymentMethod, 
-                        paymentStatus, pickupTime, proofOfPaymentImage));
+                        paymentStatus, pickupTime, proofOfPaymentImage, customerName));
                 
                 
             }
