@@ -40,10 +40,14 @@ public class AssignedOrders {
     private VBox root;
     private List<Order> allOrders; // store original list
     private VBox ordersContainer;    
-
+    private int riderId; // 👈 Add this line
+     private int userId;  // Corresponding user ID for the rider
 
     public AssignedOrders(int riderId) {
+        this.riderId = riderId; // 👈 Save the passed-in riderId
+         this.userId = getUserIdFromRiderId(riderId); // Get the corresponding userId from riderId
         root = new VBox(10); // Adjusted spacing
+        System.out.println("UserID: " + userId);
  
         allOrders = OrderFetcher.fetchOrdersByRider(riderId); // Fetch all orders once
         
@@ -274,7 +278,7 @@ public class AssignedOrders {
 
                 if (file != null) {
                     String imagePath = file.getAbsolutePath();
-                    uploadProofOfDelivery(order, imagePath);  
+                    uploadProofOfDelivery(order, imagePath, userId);  
                     Image image = new Image("file:" + imagePath);
                     imageView.setImage(image);
 
@@ -284,7 +288,7 @@ public class AssignedOrders {
             });
 
             completeOrderButton.setOnAction(pickedUp -> {
-            markOrderCompleted(order);
+            markOrderCompleted(order, userId);
             completeOrderButton.setDisable(true);
             order.setOrderStatus("completed"); // Update internal status
             statusLabel.setText("Completed");
@@ -589,7 +593,7 @@ public class AssignedOrders {
 
                 if (file != null) {
                     String imagePath = file.getAbsolutePath();
-                    uploadProofOfDelivery(order, imagePath);  
+                    uploadProofOfDelivery(order, imagePath, userId);  
                     Image image = new Image("file:" + imagePath);
                     imageView.setImage(image);
 
@@ -599,7 +603,7 @@ public class AssignedOrders {
             });
 
             completeOrderButton.setOnAction(pickedUp -> {
-            markOrderCompleted(order);
+            markOrderCompleted(order, userId);
             completeOrderButton.setDisable(true);
             order.setOrderStatus("completed"); // Update internal status
             statusLabel.setText("Completed");
@@ -652,15 +656,43 @@ public class AssignedOrders {
     if (text == null || text.isEmpty()) return "";
     return text.substring(0, 1).toUpperCase() + text.substring(1);
 }
+       
+       
+        private int getUserIdFromRiderId(int riderId) {
+        // Assuming you have a method to get userId from riderId, using JDBC or an ORM like Hibernate
+        int userId = -1; // Default to an invalid value if not found
+
+        // Query the `riders` table to get the corresponding userId
+        String query = "SELECT user_id FROM riders WHERE rider_id = ?";
+        try (Connection conn = Database.connect();
+             PreparedStatement stmt = conn.prepareStatement(query)) {
+            
+            stmt.setInt(1, riderId);
+            ResultSet rs = stmt.executeQuery();
+            
+            if (rs.next()) {
+                userId = rs.getInt("user_id");
+            }
+             System.out.println("Converted Rider ID:" + userId);
+        } catch (SQLException e) {
+            e.printStackTrace(); // Handle exceptions properly
+        }
+
+        return userId;
+       
+    }
+
     // Method to upload proof of delivery (image)
-public void uploadProofOfDelivery(Order order, String imagePath) {
-    String query = "UPDATE orders SET proof_of_delivery_image_path = ? WHERE order_id = ?";
+public void uploadProofOfDelivery(Order order, String imagePath, int userId) {
+    String query = "UPDATE orders SET proof_of_delivery_image_path = ?, updated_by = ? WHERE order_id = ?";
+
     
     try (Connection conn = Database.connect();
          PreparedStatement stmt = conn.prepareStatement(query)) {
          
         stmt.setString(1, imagePath);  // Path to the image
-        stmt.setInt(2, order.getOrderId());  // Order ID
+         stmt.setInt(2, userId); 
+        stmt.setInt(3, order.getOrderId());  // Order ID
         stmt.executeUpdate();
         
         System.out.println("Proof of delivery uploaded successfully.");
@@ -672,13 +704,16 @@ public void uploadProofOfDelivery(Order order, String imagePath) {
 
     
     // Method to mark the order as picked up in the database
-        private void markOrderCompleted(Order order) {
-            String updateQuery = "UPDATE orders SET status = 'Completed' WHERE order_id = ?";
+        private void markOrderCompleted(Order order, int userId) {
+            String updateQuery = "UPDATE orders SET status = 'Completed' , updated_by = ? WHERE order_id = ?";
+       
+
 
             try (Connection connection = Database.connect(); 
                  PreparedStatement preparedStatement = connection.prepareStatement(updateQuery)) {
 
-                preparedStatement.setInt(1, order.getOrderId()); // Set the order_id
+                 preparedStatement.setInt(1, userId); 
+                preparedStatement.setInt(2, order.getOrderId()); // Set the order_id
 
                 int rowsAffected = preparedStatement.executeUpdate();
                 if (rowsAffected > 0) {

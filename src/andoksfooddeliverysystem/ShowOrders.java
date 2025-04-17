@@ -326,10 +326,11 @@ public class ShowOrders {
                 mainContent.getChildren().add(verifyPaymentButton);
 
                 verifyPaymentButton.setOnAction(e -> {
-                    PaymentVerificationWindow.show(
+                   PaymentVerificationWindow.show(
                         order, paymentStatusLabel, orderBox, ordersContainer,
                         statusLabel, statusCircle,
-                        verifyPaymentButton, assignToRiderButton, orderPickedUpButton
+                        verifyPaymentButton, assignToRiderButton, orderPickedUpButton,
+                        adminId
                     );
                 });
 
@@ -705,7 +706,8 @@ public class ShowOrders {
                     PaymentVerificationWindow.show(
                         order, paymentStatusLabel, orderBox, ordersContainer,
                         statusLabel, statusCircle,
-                        verifyPaymentButton, assignToRiderButton, orderPickedUpButton
+                        verifyPaymentButton, assignToRiderButton, orderPickedUpButton,
+                        adminId
                     );
                 });
 

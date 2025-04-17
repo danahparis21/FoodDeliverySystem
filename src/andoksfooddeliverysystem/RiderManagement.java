@@ -170,6 +170,8 @@ public class RiderManagement {
         TableColumn<RiderManagement.RidersList, String> imageColumn = new TableColumn<>("Image Path");
         imageColumn.setCellValueFactory(new PropertyValueFactory<>("imagePath"));
         imageColumn.setPrefWidth(100);
+        
+        
 
         tableView.getColumns().addAll(nameColumn, contactColumn, imageColumn);
 

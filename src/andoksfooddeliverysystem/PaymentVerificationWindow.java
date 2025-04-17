@@ -18,11 +18,13 @@ import javafx.scene.shape.Circle;
 
 public class PaymentVerificationWindow {
 
-   public static void show(Order order, Label paymentStatusLabel, VBox orderBox, VBox ordersContainer,
-                        Label statusLabel, Circle statusCircle,
-                        Button verifyPaymentButton, Button assignToRiderButton, Button orderPickedUpButton) 
-
-{
+  public static void show(Order order, Label paymentStatusLabel, VBox orderBox, VBox ordersContainer,
+                            Label statusLabel, Circle statusCircle,
+                            Button verifyPaymentButton, Button assignToRiderButton, Button orderPickedUpButton,
+                            int adminId) {
+        // Now you can use adminId here
+        System.out.println("Admin ID received: " + adminId);
+        
     Stage verificationStage = new Stage();
     VBox layout = new VBox(10);
     layout.setPadding(new Insets(10));
@@ -58,7 +60,7 @@ public class PaymentVerificationWindow {
     declineBtn.setOnAction(de -> {
         
         updatePaymentStatus(order.getOrderId(), "Payment Declined");
-         updateOrderStatus(order.getOrderId(), "Cancelled");
+         updateOrderStatus(order.getOrderId(), "Cancelled", adminId);
          
 
         order.setPaymentStatus("Payment Declined");
@@ -93,14 +95,15 @@ public class PaymentVerificationWindow {
     verificationStage.show();
 }
    
-   private static void updateOrderStatus(int orderId, String newStatus) {
-    String updateQuery = "UPDATE orders SET status = ? WHERE order_id = ?";
-    
+   private static void updateOrderStatus(int orderId, String newStatus, int adminId) {
+    String updateQuery = "UPDATE orders SET status = ?, updated_by = ? WHERE order_id = ?";
+
     try (Connection connection = Database.connect(); 
          PreparedStatement preparedStatement = connection.prepareStatement(updateQuery)) {
 
         preparedStatement.setString(1, newStatus);
-        preparedStatement.setInt(2, orderId);
+        preparedStatement.setInt(2, adminId);  // Correct position for adminId
+        preparedStatement.setInt(3, orderId);  // Correct position for orderId
 
         int rowsAffected = preparedStatement.executeUpdate();
         if (rowsAffected > 0) {
@@ -112,6 +115,7 @@ public class PaymentVerificationWindow {
         e.printStackTrace();
     }
 }
+
 
 
     private static void updatePaymentStatus(int orderId, String newStatus) {

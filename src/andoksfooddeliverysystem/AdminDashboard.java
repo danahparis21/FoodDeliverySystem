@@ -20,6 +20,8 @@ import java.sql.Statement;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TableColumn;
@@ -39,6 +41,8 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import java.util.Optional;
 import javafx.application.Platform;
+import javafx.collections.transformation.FilteredList;
+import javafx.collections.transformation.SortedList;
 import javafx.scene.Node;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ListView;
@@ -202,6 +206,7 @@ private void showRiderManagement() {
             mainPane.setPadding(new Insets(20));
             
             mainContent.getChildren().clear(); 
+          
     
     // ====== FORM FOR ADDING MENU ITEMS ======
     VBox formPane = new VBox(10);
@@ -213,8 +218,12 @@ private void showRiderManagement() {
     nameField.setPromptText("Item Name");
     TextField priceField = new TextField();
     priceField.setPromptText("Price");
-    TextField stockField = new TextField();
-    stockField.setPromptText("Stock");
+    
+    ComboBox<String> availabilityCombo = new ComboBox<>();
+    availabilityCombo.getItems().addAll("Available", "Not Available");
+    availabilityCombo.setValue("Available"); // default
+
+    
     ComboBox<String> categoryComboBox = new ComboBox<>();
     categoryComboBox.setPromptText("Select Category");
     loadCategories(categoryComboBox); // Call method to populate categories
@@ -274,9 +283,9 @@ private void showRiderManagement() {
                 return; // Prevent saving without category
             }
 
-             String itemName = nameField.getText();
+            String itemName = nameField.getText();
             double price = Double.parseDouble(priceField.getText());
-            int stock = Integer.parseInt(stockField.getText());
+            String availability = availabilityCombo.getValue(); // changed
             String description = descriptionField.getText();
 
             // Get category_id from category_name
@@ -341,15 +350,16 @@ if (imageView.getImage() != null) {
                 if (result.isPresent()) {
                     if (result.get() == updateButton) {
     // Update existing menu item
-            String updateSql = "UPDATE menu_items SET price = ?, stock = ?, category_id = ?, description = ?, image_path = ? WHERE item_id = ?";
+            String updateSql = "UPDATE menu_items SET price = ?, availability = ?, category_id = ?, description = ?, image_path = ?, last_modified_by = ? WHERE item_id = ?";
             PreparedStatement updateStmt = conn.prepareStatement(updateSql);
             updateStmt.setDouble(1, price);
-            updateStmt.setInt(2, stock);
+            updateStmt.setString(2, availability);
             updateStmt.setInt(3, categoryId);
             updateStmt.setString(4, description);
             updateStmt.setString(5, imagePath);
-            updateStmt.setInt(6, existingId);  
-
+            updateStmt.setInt(6, userID);  
+            updateStmt.setInt(7, existingId);   
+   
             updateStmt.executeUpdate();
             System.out.println("Menu item updated!");
 
@@ -362,7 +372,7 @@ if (imageView.getImage() != null) {
 
             // ✅ 2. Insert new variations
             ObservableList<String> variations = variationList.getItems();
-            String insertVariationSQL = "INSERT INTO menu_variations (item_id, variation_name, variation_price) VALUES (?, ?, ?)";
+            String insertVariationSQL = "INSERT INTO menu_variations (item_id, variation_name, variation_price, last_modified_by) VALUES (?, ?, ?, ?)";
             PreparedStatement variationStmt = conn.prepareStatement(insertVariationSQL);
 
             for (String variation : variations) {
@@ -375,23 +385,24 @@ if (imageView.getImage() != null) {
                     variationStmt.setInt(1, existingId);
                     variationStmt.setString(2, variationName);
                     variationStmt.setBigDecimal(3, new BigDecimal(priceString));
+                     variationStmt.setInt(4, userID);  
                     variationStmt.executeUpdate();
                 }
             }
             System.out.println("New variations updated!");
         }
-
-                    
-                    else if (result.get() == insertNewButton) {
+           else if (result.get() == insertNewButton) {
                         // Insert a new item (ensuring name uniqueness)
-                        String insertSql = "INSERT INTO menu_items (name, price, stock, category_id, description, image_path) VALUES (?, ?, ?, ?, ?, ?)";
-                        PreparedStatement insertStmt = conn.prepareStatement(insertSql);
+                        String insertSql = "INSERT INTO menu_items (name, price, availability, category_id, description, image_path, last_modified_by) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                        PreparedStatement insertStmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS);
+
                         insertStmt.setString(1, itemName + " (New)");
                         insertStmt.setDouble(2, price);
-                        insertStmt.setInt(3, stock);
+                        insertStmt.setString(3, availability);
                         insertStmt.setInt(4, categoryId);
                         insertStmt.setString(5, description);
                         insertStmt.setString(6, imagePath);
+                        insertStmt.setInt(7, userID);
 
                         insertStmt.executeUpdate();
                         
@@ -403,7 +414,7 @@ if (imageView.getImage() != null) {
                         
                          ObservableList<String> variations = variationList.getItems(); // Get all variations
 
-                        String insertVariationSQL = "INSERT INTO menu_variations (item_id, variation_name, variation_price) VALUES (?, ?, ?)";
+                        String insertVariationSQL = "INSERT INTO menu_variations (item_id, variation_name, variation_price, last_modified_by) VALUES (?, ?, ?, ?)";
                         PreparedStatement variationStmt = conn.prepareStatement(insertVariationSQL);
 
                         for (String variation : variations) {
@@ -417,6 +428,7 @@ if (imageView.getImage() != null) {
                                 variationStmt.setInt(1, itemId); // Link variation to menu item
                                 variationStmt.setString(2, variationName); // Extracted variation name
                                 variationStmt.setBigDecimal(3, new BigDecimal(priceString)); // Convert price to BigDecimal
+                                variationStmt.setInt(4, userID);
                                 variationStmt.executeUpdate();
                             }
                         }
@@ -426,15 +438,16 @@ if (imageView.getImage() != null) {
                 }
             } else {
                 // If item doesn't exist, insert a new record
-                String insertSql = "INSERT INTO menu_items (name, price, stock, category_id, description, image_path) VALUES (?, ?, ?, ?, ?, ?)";
+                String insertSql = "INSERT INTO menu_items (name, price, availability, category_id, description, image_path, last_modified_by) VALUES (?, ?, ?, ?, ?, ?, ?)";
                 PreparedStatement insertStmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS); // ✅ FIXED
 
                 insertStmt.setString(1, itemName);
                 insertStmt.setDouble(2, price);
-                insertStmt.setInt(3, stock);
+                insertStmt.setString(3, availability);
                 insertStmt.setInt(4, categoryId);
                 insertStmt.setString(5, description);
                 insertStmt.setString(6, imagePath);
+                insertStmt.setInt(7, userID);
 
                 insertStmt.executeUpdate();
                 
@@ -446,7 +459,7 @@ if (imageView.getImage() != null) {
                 
                 ObservableList<String> variations = variationList.getItems(); // Get all variations
 
-                String insertVariationSQL = "INSERT INTO menu_variations (item_id, variation_name, variation_price) VALUES (?, ?, ?)";
+                String insertVariationSQL = "INSERT INTO menu_variations (item_id, variation_name, variation_price, last_modified_by) VALUES (?, ?, ?,?)";
                 PreparedStatement variationStmt = conn.prepareStatement(insertVariationSQL);
 
                 for (String variation : variations) {
@@ -460,6 +473,7 @@ if (imageView.getImage() != null) {
                         variationStmt.setInt(1, itemId); // Link variation to menu item
                         variationStmt.setString(2, variationName); // Extracted variation name
                         variationStmt.setBigDecimal(3, new BigDecimal(priceString)); // Convert price to BigDecimal
+                        variationStmt.setInt(4, userID); // Convert price to BigDecimal
                         variationStmt.executeUpdate();
                     }
                 }
@@ -479,7 +493,22 @@ if (imageView.getImage() != null) {
         });
 
     // Add components to the form layout
-    formPane.getChildren().addAll(titleLabel, nameField, priceField, stockField, categoryComboBox, descriptionField, variationPane,uploadButton,  imageView, saveButton);
+    formPane.getChildren().addAll(titleLabel, nameField, priceField, availabilityCombo , categoryComboBox, descriptionField, variationPane,uploadButton,  imageView, saveButton);
+
+    //===
+    TextField searchField = new TextField();
+    searchField.setPromptText("Search...");
+
+    ComboBox<String> categoryFilter = new ComboBox<>();
+    categoryFilter.getItems().add("All Categories");
+    categoryFilter.getItems().addAll(getAllCategoryNamesFromDB());
+    categoryFilter.setValue("All Categories");
+
+    Button sortAZ = new Button("Sort A-Z");
+    Button sortZA = new Button("Sort Z-A");
+
+    HBox topBar = new HBox(10, searchField, categoryFilter, sortAZ, sortZA);
+    topBar.setPadding(new Insets(10));
 
     
     // ====== TABLEVIEW FOR DISPLAYING MENU ITEMS ======
@@ -494,9 +523,9 @@ if (imageView.getImage() != null) {
     priceColumn.setCellValueFactory(new PropertyValueFactory<>("price"));
     priceColumn.setPrefWidth(100);
 
-    TableColumn<FoodItem, Double> stockColumn = new TableColumn<>("Stock");
-    stockColumn.setCellValueFactory(new PropertyValueFactory<>("stock"));
-    stockColumn.setPrefWidth(100);
+    TableColumn<FoodItem, Double> availabilityColumn = new TableColumn<>("Availability");
+    availabilityColumn.setCellValueFactory(new PropertyValueFactory<>("availability"));
+    availabilityColumn.setPrefWidth(100);
     
     TableColumn<FoodItem, String> categoryColumn = new TableColumn<>("Category");
     categoryColumn.setCellValueFactory(cellData -> {
@@ -516,12 +545,19 @@ if (imageView.getImage() != null) {
     imageColumn.setCellValueFactory(new PropertyValueFactory<>("imagePath"));
     imageColumn.setPrefWidth(100);
 
-    tableView.getColumns().addAll(nameColumn, priceColumn, stockColumn, categoryColumn, descriptionColumn, imageColumn);
+    tableView.getColumns().addAll(nameColumn, priceColumn, availabilityColumn, categoryColumn, descriptionColumn, imageColumn);
     
    ObservableList<FoodItem> menuItems = FXCollections.observableArrayList();
+         
+    FilteredList<FoodItem> filteredData = new FilteredList<>(menuItems, p -> true);
+    SortedList<FoodItem> sortedData = new SortedList<>(filteredData);
+    sortedData.comparatorProperty().bind(tableView.comparatorProperty());
+    tableView.setItems(sortedData);
+
+    
 
     try (Connection conn = Database.connect()) {
-        String sql = "SELECT item_id, name, price, stock, category_id, description, image_path FROM menu_items";
+        String sql = "SELECT item_id, name, price, availability, category_id, description, image_path FROM menu_items";
         PreparedStatement stmt = conn.prepareStatement(sql);
         ResultSet rs = stmt.executeQuery();
 
@@ -529,20 +565,39 @@ if (imageView.getImage() != null) {
             int id = rs.getInt("item_id");
             String name = rs.getString("name");
             double price = rs.getDouble("price");
-            int stock = rs.getInt("stock");
+            String availability = rs.getString("availability"); // fixed
             int category = rs.getInt("category_id");
             String description = rs.getString("description");
             String imagePath = rs.getString("image_path");
 
             // Add to TableView
-            menuItems.add(new FoodItem(id, name, price, stock, category, description, imagePath));
+            menuItems.add(new FoodItem(id, name, price, availability, category, description, imagePath));
         }
     } catch (SQLException ex) {
         ex.printStackTrace();
     }
 
+    searchField.textProperty().addListener((obs, oldVal, newVal) -> {
+        applyFilters(filteredData, searchField, categoryFilter);
+    });
 
-    tableView.setItems(menuItems);
+    categoryFilter.valueProperty().addListener((obs, oldVal, newVal) -> {
+        applyFilters(filteredData, searchField, categoryFilter);
+    });
+
+    sortAZ.setOnAction(e -> {
+        tableView.getSortOrder().clear();
+        nameColumn.setSortType(TableColumn.SortType.ASCENDING);
+        tableView.getSortOrder().add(nameColumn);
+    });
+
+    sortZA.setOnAction(e -> {
+        tableView.getSortOrder().clear();
+        nameColumn.setSortType(TableColumn.SortType.DESCENDING);
+        tableView.getSortOrder().add(nameColumn);
+    });
+
+
 
     // Make table stretchable
     HBox.setHgrow(tableView, Priority.ALWAYS);
@@ -554,7 +609,7 @@ if (imageView.getImage() != null) {
             FoodItem selectedItem = tableView.getSelectionModel().getSelectedItem();
             nameField.setText(selectedItem.getName());
             priceField.setText(String.valueOf(selectedItem.getPrice()));
-            stockField.setText(String.valueOf(selectedItem.getStock()));
+             availabilityCombo.setValue(selectedItem.getAvailability());
 
             // Convert category ID to category name before setting ComboBox value
             String categoryName = getCategoryName(selectedItem.getCategoryId());
@@ -647,11 +702,51 @@ if (imageView.getImage() != null) {
 
     // Add to form layout
     formPane.getChildren().add(deleteButton);
+   
+     VBox searchTableView = new VBox(10); // VBox to stack search bar and table with spacing
+    searchTableView.getChildren().addAll(topBar, tableView);
 
     // Add formPane and tableView to mainPane
-    mainPane.getChildren().addAll(formPane, tableView);
+    mainPane.getChildren().addAll(formPane, searchTableView);
     mainContent.getChildren().add(mainPane);  // ✅ Add menu UI inside `mainContent`
 }
+    private void applyFilters(FilteredList<FoodItem> filteredData, TextField searchField, ComboBox<String> categoryFilter) {
+    String search = searchField.getText().toLowerCase();
+    String selectedCategory = categoryFilter.getValue();
+
+    filteredData.setPredicate(item -> {
+        boolean matchesSearch = item.getName().toLowerCase().contains(search)
+            || String.valueOf(item.getPrice()).contains(search)
+            || item.getAvailability().toLowerCase().contains(search)
+            || getCategoryName(item.getCategoryId()).toLowerCase().contains(search)
+            || (item.getDescription() != null && item.getDescription().toLowerCase().contains(search));
+
+        boolean matchesCategory = selectedCategory.equals("All Categories") ||
+            getCategoryName(item.getCategoryId()).equals(selectedCategory);
+
+        return matchesSearch && matchesCategory;
+    });
+}
+    
+    public List<String> getAllCategoryNamesFromDB() {
+        List<String> categoryNames = new ArrayList<>();
+
+        try (Connection conn = Database.connect()) {
+            String sql = "SELECT category_name FROM categories"; // adjust table name if needed
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                categoryNames.add(rs.getString("category_name"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return categoryNames;
+    }
+
+
     private void fetchAndDisplayVariations(int itemId) {
       variationList.getItems().clear(); // Clear old variations first
 
