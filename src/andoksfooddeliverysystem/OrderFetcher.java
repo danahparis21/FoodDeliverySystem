@@ -13,12 +13,8 @@ public class OrderFetcher {
         List<Order> orders = new ArrayList<>();
         
         // SQL query to fetch orders and their associated address information
-        String orderQuery = "SELECT o.*, a.street, b.barangay_name, a.contact_number, c.name AS customer_name\n" +
-                            "FROM orders o\n" +
-                            "INNER JOIN addresses a ON o.address_id = a.address_id\n" +
-                            "INNER JOIN barangay b ON a.barangay_id = b.barangay_id\n" +
-                            "INNER JOIN customers c ON o.customer_id = c.customer_id"; // Fetch order and address details
-        
+       String orderQuery = "SELECT * FROM order_address_view"; // Now just select from the view
+
         // SQL query to fetch items for a specific order
         String itemQuery = "SELECT oi.*, i.* \n" +
                 "FROM order_items oi\n" +
@@ -76,12 +72,8 @@ public class OrderFetcher {
     }
     public static List<Order> fetchOrdersByRider(int riderId) {
     List<Order> orders = new ArrayList<>();
-    String query = "SELECT o.*, a.street, b.barangay_name, a.contact_number, c.name AS customer_name\n" +
-                    "FROM orders o\n" +
-                    "INNER JOIN addresses a ON o.address_id = a.address_id\n" +
-                    "INNER JOIN barangay b ON a.barangay_id = b.barangay_id\n" +
-                    "INNER JOIN customers c ON o.customer_id = c.customer_id\n" +
-                    "WHERE o.rider_id = ?"; // Fetch orders for a specific rider
+    String query = "SELECT * FROM order_address_view WHERE rider_id = ?";
+
 
     // SQL query to fetch items for a specific order
     String itemQuery = "SELECT oi.*, i.* FROM order_items oi " +
@@ -150,12 +142,7 @@ public class OrderFetcher {
         List<Order> orders = new ArrayList<>();
 
         // SQL query to fetch orders and their associated address information for a specific customer
-        String orderQuery = "SELECT o.*, a.street, b.barangay_name, a.contact_number, c.name AS customer_name " +
-                            "FROM orders o " +
-                            "INNER JOIN addresses a ON o.address_id = a.address_id " +
-                            "INNER JOIN barangay b ON a.barangay_id = b.barangay_id " +
-                            "INNER JOIN customers c ON o.customer_id = c.customer_id " +
-                            "WHERE o.customer_id = ?"; // Fetch orders only for the given customer
+        String orderQuery = "SELECT * FROM order_address_customer_view WHERE customer_id = ?";
 
         // SQL query to fetch items for a specific order
         String itemQuery = "SELECT oi.*, i.* \n" +

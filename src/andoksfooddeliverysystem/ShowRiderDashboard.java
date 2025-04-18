@@ -460,25 +460,13 @@ private String formatTimeLabel(String range, String rawValue) {
 private String buildRevenueQuery(String range) {
   switch (range) {
         case "Today":
-            return "SELECT HOUR(order_date) AS hour, SUM(total_price) AS revenue " +
-                   "FROM orders " +
-                   "WHERE DATE(order_date) = CURDATE() AND rider_id = ? " +
-                   "GROUP BY HOUR(order_date) ORDER BY hour";
+            return "SELECT * FROM rider_earnings_today_view WHERE rider_id = ?;";
         case "Weekly":
-            return "SELECT DATE_FORMAT(order_date, '%Y-%m-%d') AS day, SUM(total_price) AS revenue " +
-                   "FROM orders " +
-                   "WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) AND rider_id = ? " +
-                   "GROUP BY DATE(order_date) ORDER BY day";
+            return "SELECT * FROM rider_earnings_weekly_view WHERE rider_id = ?;";
         case "Monthly":
-            return "SELECT DATE_FORMAT(order_date, '%Y-%m') AS month, SUM(total_price) AS revenue " +
-                   "FROM orders " +
-                   "WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH) AND rider_id = ? " +
-                   "GROUP BY DATE_FORMAT(order_date, '%Y-%m') ORDER BY month";
+            return "SELECT * FROM rider_earnings_monthly_view WHERE rider_id = ?;";
         case "Yearly":
-            return "SELECT YEAR(order_date) AS year, SUM(total_price) AS revenue " +
-                   "FROM orders " +
-                   "WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL 5 YEAR) AND rider_id = ? " +
-                   "GROUP BY YEAR(order_date) ORDER BY year";
+            return "SELECT * FROM rider_earnings_yearly_view WHERE rider_id = ?;";
         default:
             return buildRevenueQuery("Today");
     }

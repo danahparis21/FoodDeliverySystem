@@ -214,8 +214,7 @@ public class ShowAdminDashboard {
             }
         }
     }
-
-    private void updateStoreStatus(String newStatus) {
+private void updateStoreStatus(String newStatus) {
     String query = "UPDATE store SET store_status = ?, last_modified_by = ? WHERE store_id = 1";
 
     try (Connection conn = Database.connect();
@@ -229,6 +228,19 @@ public class ShowAdminDashboard {
             storeStatusLabel.setText("Store is currently: " + newStatus);
             toggleShopButton.setText(newStatus.equals("Open") ? "Close Shop" : "Open Shop");
             System.out.println("✅ Store status updated to: " + newStatus);
+
+            // 👇 Cancel all pending orders if store is closed
+            if (newStatus.equalsIgnoreCase("Close")) {
+                System.out.println("🧪 newStatus value: " + newStatus);
+
+                String cancelQuery = "UPDATE orders SET status = 'Cancelled', last_modified_by = ? WHERE status = 'Pending'";
+                try (PreparedStatement cancelStmt = conn.prepareStatement(cancelQuery)) {
+                    cancelStmt.setInt(1, userID);
+                    int cancelled = cancelStmt.executeUpdate();
+                    System.out.println("🛑 Pending orders cancelled: " + cancelled);
+                }
+            }
+
         } else {
             System.out.println("❌ Failed to update store status.");
         }
@@ -237,6 +249,7 @@ public class ShowAdminDashboard {
         e.printStackTrace();
     }
 }
+
 
     private void showInfo(String message) {
     Alert info = new Alert(Alert.AlertType.INFORMATION);
@@ -249,28 +262,12 @@ public class ShowAdminDashboard {
     
 private void loadTodayStats() {
     // Today's stats
-    String todayQuery = """
-        SELECT 
-            COUNT(*) AS total_orders,
-            SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) AS completed,
-            SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) AS pending,
-            SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) AS cancelled,
-            COUNT(DISTINCT customer_id) AS unique_customers,
-            SUM(CASE WHEN order_type = 'Delivery' THEN 1 ELSE 0 END) AS delivery_orders,
-            SUM(CASE WHEN order_type = 'Pick Up' THEN 1 ELSE 0 END) AS pickup_orders
-        FROM orders
-        WHERE DATE(order_date) = CURDATE()
-    """;
+   String todayQuery = "SELECT * FROM today_order_stats";
+
 
     // All-time stats
-    String allTimeQuery = """
-        SELECT 
-            COUNT(*) AS total_orders,
-            SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) AS completed,
-            SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) AS pending,
-            SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) AS cancelled
-        FROM orders
-    """;
+    String allTimeQuery = "SELECT * FROM all_time_order_stats";
+
 
     try (Connection conn = Database.connect()) {
         // Today's orders
@@ -382,11 +379,7 @@ private VBox createPerformanceSection() {
 
 private ObservableList<PieChart.Data> getMostOrderedItemsData() {
     ObservableList<PieChart.Data> data = FXCollections.observableArrayList();
-    String sql = "SELECT mi.name, SUM(oi.quantity) as total_quantity " +
-                 "FROM order_items oi " +
-                 "JOIN menu_items mi ON oi.item_id = mi.item_id " +
-                 "GROUP BY mi.name " +
-                 "ORDER BY total_quantity DESC";
+   String sql = "SELECT * FROM menu_item_sales_view";
 
     try (Connection conn = Database.connect();
          PreparedStatement stmt = conn.prepareStatement(sql);
@@ -403,9 +396,7 @@ private ObservableList<PieChart.Data> getMostOrderedItemsData() {
 
 private ObservableList<PieChart.Data> getPaymentMethodData() {
     ObservableList<PieChart.Data> data = FXCollections.observableArrayList();
-    String sql = "SELECT payment_method, COUNT(*) AS count " +
-                 "FROM orders " +
-                 "GROUP BY payment_method";
+    String sql = "SELECT * FROM payment_method_count_view";
 
     try (Connection conn =  Database.connect();
          PreparedStatement stmt = conn.prepareStatement(sql);
@@ -422,9 +413,7 @@ private ObservableList<PieChart.Data> getPaymentMethodData() {
 
 private ObservableList<PieChart.Data> getBusiestTimeOfDayData() {
     ObservableList<PieChart.Data> data = FXCollections.observableArrayList();
-    String sql = "SELECT HOUR(order_date) AS hour, COUNT(*) AS count " +
-                 "FROM orders " +
-                 "GROUP BY hour ORDER BY hour"; // Removed the date filter
+   String sql = "SELECT * FROM hourly_order_count_view";
 
     try (Connection conn = Database.connect();
          PreparedStatement stmt = conn.prepareStatement(sql);
@@ -645,37 +634,21 @@ private String formatTimeLabel(String range, String rawValue) {
         default:
             return rawValue;
     }
-}
-private String buildRevenueQuery(String range) {
+}private String buildRevenueQuery(String range) {
     switch (range) {
         case "Today":
-            return "SELECT HOUR(order_date) AS hour, SUM(total_price) AS revenue " +
-                   "FROM orders " +
-                   "WHERE DATE(order_date) = CURDATE() " +
-                   "GROUP BY HOUR(order_date) " +
-                   "ORDER BY hour";
+            return "SELECT * FROM revenue_today";
         case "Weekly":
-            return "SELECT DATE_FORMAT(order_date, '%Y-%m-%d') AS day, SUM(total_price) AS revenue " +
-                   "FROM orders " +
-                   "WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) " +
-                   "GROUP BY DATE(order_date) " +
-                   "ORDER BY day";
+            return "SELECT * FROM revenue_weekly";
         case "Monthly":
-            return "SELECT DATE_FORMAT(order_date, '%Y-%m') AS month, SUM(total_price) AS revenue " +
-                   "FROM orders " +
-                   "WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH) " +
-                   "GROUP BY DATE_FORMAT(order_date, '%Y-%m') " +
-                   "ORDER BY month";
+            return "SELECT * FROM revenue_monthly";
         case "Yearly":
-            return "SELECT YEAR(order_date) AS year, SUM(total_price) AS revenue " +
-                   "FROM orders " +
-                   "WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL 5 YEAR) " +
-                   "GROUP BY YEAR(order_date) " +
-                   "ORDER BY year";
+            return "SELECT * FROM revenue_yearly";
         default:
             return buildRevenueQuery("Today");
     }
 }
+
 private VBox createMenuCategoryChartPanel() {
     // Create axes
     CategoryAxis xAxis = new CategoryAxis();
@@ -717,11 +690,7 @@ private VBox createMenuCategoryChartPanel() {
 
 private void updateMenuCategoryChart(BarChart<String, Number> barChart) {
     // SQL query to count items per category
-    String query = "SELECT c.category_name, COUNT(m.item_id) AS item_count " +
-                   "FROM categories c " +
-                   "LEFT JOIN menu_items m ON c.category_id = m.category_id " +
-                   "GROUP BY c.category_name " +
-                   "ORDER BY item_count DESC";
+    String query = "SELECT * FROM category_item_count";
 
     XYChart.Series<String, Number> series = new XYChart.Series<>();
     series.setName("Menu Items");
@@ -882,13 +851,9 @@ private void updateRiderOrdersChart(BarChart<String, Number> barChart, String ti
         showAlert(Alert.AlertType.ERROR, "Database Error", "Failed to load rider order data");
         loadSampleRiderData(barChart);
     }
-}
-
-private String buildRiderOrdersQuery(String timePeriod, boolean completedOnly) {
+}private String buildRiderOrdersQuery(String timePeriod, boolean completedOnly) {
     StringBuilder query = new StringBuilder();
-    
-    // Base query
-    query.append("SELECT name AS rider_name, COUNT(o.order_id) AS order_count ")
+       query.append("SELECT name AS rider_name, COUNT(o.order_id) AS order_count ")
          .append("FROM orders o ")
          .append("INNER JOIN riders r ON o.rider_id = r.rider_id ");
     
@@ -924,6 +889,8 @@ private String buildRiderOrdersQuery(String timePeriod, boolean completedOnly) {
     
     return query.toString();
 }
+
+
 
 private String getRiderColor(int index) {
     // Professional color palette
@@ -1003,13 +970,9 @@ private void addTableHeader(GridPane table, String text, int column) {
 }
 
 private void loadRiderPerformanceData(GridPane table) {
-    String query = "SELECT r.rider_id, r.name, r.average_rating, r.total_reviews, " +
-                  "COUNT(o.order_id) AS order_count, SUM(o.total_price) AS total_earnings, " +
-                  "r.status " +
-                  "FROM riders r " +
-                  "LEFT JOIN orders o ON r.rider_id = o.rider_id AND o.status = 'Completed' " +
-                  "GROUP BY r.rider_id, r.name, r.average_rating, r.total_reviews, r.status " +
-                  "ORDER BY order_count DESC";
+    String query = "SELECT rider_id, name, average_rating, total_reviews, order_count, total_earnings, status " +
+                   "FROM rider_performance_view " +
+                   "ORDER BY order_count DESC";
 
     try (Connection conn = Database.connect();
          PreparedStatement stmt = conn.prepareStatement(query);

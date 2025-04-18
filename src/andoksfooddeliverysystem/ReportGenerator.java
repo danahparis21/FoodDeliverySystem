@@ -310,29 +310,15 @@ private static Cell createStatusCell(String status) throws IOException {
      public static String buildRevenueQuery(String range) {
         switch (range) {
             case "Today":
-                return "SELECT HOUR(order_date) AS hour, SUM(total_price) AS revenue " +
-                       "FROM orders " +
-                       "WHERE DATE(order_date) = CURDATE() " +
-                       "GROUP BY HOUR(order_date) " +
-                       "ORDER BY hour";
+                return "SELECT * FROM today_hourly_revenue_view";
             case "Weekly":
-                return "SELECT DATE_FORMAT(order_date, '%Y-%m-%d') AS day, SUM(total_price) AS revenue " +
-                       "FROM orders " +
-                       "WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) " +
-                       "GROUP BY DATE(order_date) " +
-                       "ORDER BY day";
+                return "SELECT * FROM weekly_revenue_view";
             case "Monthly":
-                return "SELECT DATE_FORMAT(order_date, '%Y-%m') AS month, SUM(total_price) AS revenue " +
-                       "FROM orders " +
-                       "WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH) " +
-                       "GROUP BY DATE_FORMAT(order_date, '%Y-%m') " +
-                       "ORDER BY month";
+               return "SELECT * FROM monthly_revenue_view";
+
             case "Yearly":
-                return "SELECT YEAR(order_date) AS year, SUM(total_price) AS revenue " +
-                       "FROM orders " +
-                       "WHERE order_date >= DATE_SUB(CURDATE(), INTERVAL 5 YEAR) " +
-                       "GROUP BY YEAR(order_date) " +
-                       "ORDER BY year";
+                return "SELECT * FROM yearly_revenue_view";
+
             default:
                 return buildRevenueQuery("Today");
         }
