@@ -7,8 +7,15 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import java.sql.*;
 import java.text.DateFormatSymbols;
+import java.text.SimpleDateFormat;
 import java.util.Optional;
 import javafx.application.Platform;
+import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.HPos;
@@ -26,6 +33,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
+import javafx.scene.control.TableView;
 import javafx.scene.control.Tooltip;
 import javafx.scene.effect.Glow;
 import javafx.scene.layout.AnchorPane;
@@ -37,6 +45,15 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
+import javafx.scene.control.TableCell;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.HBox;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Text;
+
+
 
 public class ShowAdminDashboard {
     private VBox root;
@@ -351,11 +368,13 @@ private VBox createPerformanceSection() {
     });
 
     customerTableBox.getChildren().addAll(customerTableFilter, customerTable);
-
-  
+    
+    //RATINGS 
+        VBox ratingsView = createRatingsViewer();
+    
     // Layout for the performance section
     VBox performanceBox = new VBox(10, performanceTitle, generateReportButton, pieCharts, revenueChartPanel, 
-            chartsPane, riderDashboard, customerTableBox);
+            chartsPane, riderDashboard, customerTableBox, ratingsView);
     performanceBox.setPadding(new Insets(10));
     
     return performanceBox;
@@ -1139,10 +1158,245 @@ private String buildLoyalCustomerTableQuery(String timePeriod) {
     return baseQuery;
 }
 
+private VBox createRatingsViewer() {
+    // Title for Ratings section
+    Label ratingsTitle = new Label("Customer Ratings");
+    ratingsTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+    
+    // Create filter controls
+    HBox filterBox = new HBox(10);
+    filterBox.setAlignment(Pos.CENTER_LEFT);
+    
+    ComboBox<String> ratingTypeFilter = new ComboBox<>();
+    ratingTypeFilter.getItems().addAll("All Ratings", "Food Only", "Delivery Only");
+    ratingTypeFilter.setValue("All Ratings");
+    
+    ComboBox<String> timeFilter = new ComboBox<>();
+    timeFilter.getItems().addAll("All Time", "Today", "This Week", "This Month");
+    timeFilter.setValue("All Time");
+    
+    filterBox.getChildren().addAll(
+        new Label("Show:"), ratingTypeFilter,
+        new Label("From:"), timeFilter
+    );
+    
+    // Create table for ratings
+    TableView<Rating> ratingsTable = createRatingsTable();
+    
+    // Load initial data
+    updateRatingsTable(ratingsTable, "All Ratings", "All Time");
+    
+    // Set up filter actions
+    ratingTypeFilter.setOnAction(e -> updateRatingsTable(
+        ratingsTable, 
+        ratingTypeFilter.getValue(), 
+        timeFilter.getValue()
+    ));
+    
+    timeFilter.setOnAction(e -> updateRatingsTable(
+        ratingsTable, 
+        ratingTypeFilter.getValue(), 
+        timeFilter.getValue()
+    ));
+    
+    // Put table in scrollable container
+    ScrollPane scrollPane = new ScrollPane(ratingsTable);
+    scrollPane.setFitToWidth(true);
+    scrollPane.setPrefHeight(300);
+    
+    // Create container
+    VBox ratingsBox = new VBox(10, ratingsTitle, filterBox, scrollPane);
+    ratingsBox.setPadding(new Insets(10));
+    ratingsBox.setStyle("-fx-background-color: white; -fx-border-radius: 5;");
+    
+    return ratingsBox;
+}
+
+private TableView<Rating> createRatingsTable() {
+    TableView<Rating> table = new TableView<>();
+    
+    // Order ID column
+    TableColumn<Rating, Integer> orderCol = new TableColumn<>("Order ID");
+    orderCol.setCellValueFactory(new PropertyValueFactory<>("orderId"));
+    
+    // Food Rating column (with stars)
+    TableColumn<Rating, Integer> foodRatingCol = new TableColumn<>("Food Rating");
+    foodRatingCol.setCellValueFactory(new PropertyValueFactory<>("foodRating"));
+    foodRatingCol.setCellFactory(col -> new TableCell<Rating, Integer>() {
+        @Override
+        protected void updateItem(Integer rating, boolean empty) {
+            super.updateItem(rating, empty);
+            if (empty || rating == null) {
+                setGraphic(null);
+            } else {
+                HBox stars = new HBox(2);
+                for (int i = 0; i < 5; i++) {
+                    Text star = new Text(i < rating ? "★" : "☆");
+                    star.setFill(i < rating ? Color.GOLD : Color.GRAY);
+                    star.setStyle("-fx-font-size: 16px;");
+                    stars.getChildren().add(star);
+                }
+                setGraphic(stars);
+            }
+        }
+    });
+    
+    // Food Review column
+    TableColumn<Rating, String> foodReviewCol = new TableColumn<>("Food Review");
+    foodReviewCol.setCellValueFactory(new PropertyValueFactory<>("foodReview"));
+    foodReviewCol.setPrefWidth(200);
+    
+    // Delivery Rating column (with stars)
+    TableColumn<Rating, Integer> deliveryRatingCol = new TableColumn<>("Delivery Rating");
+    deliveryRatingCol.setCellValueFactory(new PropertyValueFactory<>("deliveryRating"));
+    deliveryRatingCol.setCellFactory(col -> new TableCell<Rating, Integer>() {
+        @Override
+        protected void updateItem(Integer rating, boolean empty) {
+            super.updateItem(rating, empty);
+            if (empty || rating == null) {
+                setGraphic(null);
+            } else {
+                HBox stars = new HBox(2);
+                for (int i = 0; i < 5; i++) {
+                    Text star = new Text(i < rating ? "★" : "☆");
+                    star.setFill(i < rating ? Color.GOLD : Color.GRAY);
+                    star.setStyle("-fx-font-size: 16px;");
+                    stars.getChildren().add(star);
+                }
+                setGraphic(stars);
+            }
+        }
+    });
+    
+    // Delivery Review column
+    TableColumn<Rating, String> deliveryReviewCol = new TableColumn<>("Delivery Review");
+    deliveryReviewCol.setCellValueFactory(new PropertyValueFactory<>("deliveryReview"));
+    deliveryReviewCol.setPrefWidth(200);
+    
+    // Date column
+    TableColumn<Rating, String> dateCol = new TableColumn<>("Date");
+    dateCol.setCellValueFactory(new PropertyValueFactory<>("formattedDate"));
+    
+    table.getColumns().addAll(
+        orderCol, foodRatingCol, foodReviewCol, 
+        deliveryRatingCol, deliveryReviewCol, dateCol
+    );
+    
+    table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+    return table;
+}
+
+private void updateRatingsTable(TableView<Rating> table, String ratingType, String timePeriod) {
+    String query = buildRatingsQuery(ratingType, timePeriod);
+    
+    ObservableList<Rating> ratings = FXCollections.observableArrayList();
+    
+    try (Connection conn = Database.connect();
+         PreparedStatement stmt = conn.prepareStatement(query);
+         ResultSet rs = stmt.executeQuery()) {
+        
+        while (rs.next()) {
+            ratings.add(new Rating(
+                rs.getInt("rating_id"),
+                rs.getInt("order_id"),
+                rs.getInt("food_rating"),
+                rs.getString("food_review"),
+                rs.getInt("delivery_rating"),
+                rs.getString("delivery_review"),
+                rs.getTimestamp("rating_date")
+            ));
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    
+    table.setItems(ratings);
+}
+
+private String buildRatingsQuery(String ratingType, String timePeriod) {
+    StringBuilder query = new StringBuilder("""
+        SELECT rating_id, order_id, food_rating, food_review, 
+               delivery_rating, delivery_review, rating_date
+        FROM ratings
+        WHERE 1=1
+    """);
+    
+    // Add rating type filter
+    if (!ratingType.equals("All Ratings")) {
+        if (ratingType.equals("Food Only")) {
+            query.append(" AND food_rating > 0");
+        } else if (ratingType.equals("Delivery Only")) {
+            query.append(" AND delivery_rating > 0");
+        }
+    }
+    
+    // Add time period filter
+    if (!timePeriod.equals("All Time")) {
+        query.append(" AND ");
+        switch (timePeriod) {
+            case "Today":
+                query.append("DATE(rating_date) = CURDATE()");
+                break;
+            case "This Week":
+                query.append("YEARWEEK(rating_date) = YEARWEEK(CURDATE())");
+                break;
+            case "This Month":
+                query.append("YEAR(rating_date) = YEAR(CURDATE()) AND MONTH(rating_date) = MONTH(CURDATE())");
+                break;
+        }
+    }
+    
+    query.append(" ORDER BY rating_date DESC");
+    return query.toString();
+}
 
 
-
-
+// Rating model class
+public class Rating {
+    private final IntegerProperty ratingId;
+    private final IntegerProperty orderId;
+    private final IntegerProperty foodRating;
+    private final StringProperty foodReview;
+    private final IntegerProperty deliveryRating;
+    private final StringProperty deliveryReview;
+    private final ObjectProperty<Timestamp> ratingDate;
+    
+    public Rating(int ratingId, int orderId, int foodRating, String foodReview, 
+                 int deliveryRating, String deliveryReview, Timestamp ratingDate) {
+        this.ratingId = new SimpleIntegerProperty(ratingId);
+        this.orderId = new SimpleIntegerProperty(orderId);
+        this.foodRating = new SimpleIntegerProperty(foodRating);
+        this.foodReview = new SimpleStringProperty(foodReview);
+        this.deliveryRating = new SimpleIntegerProperty(deliveryRating);
+        this.deliveryReview = new SimpleStringProperty(deliveryReview);
+        this.ratingDate = new SimpleObjectProperty<>(ratingDate);
+    }
+    
+    // Getters and property methods
+    public int getOrderId() { return orderId.get(); }
+    public int getFoodRating() { return foodRating.get(); }
+    public String getFoodReview() { return foodReview.get(); }
+    public int getDeliveryRating() { return deliveryRating.get(); }
+    public String getDeliveryReview() { return deliveryReview.get(); }
+    public String getFormattedDate() { 
+        return new SimpleDateFormat("MMM d, yyyy h:mm a").format(ratingDate.get()); 
+    }
+    
+    // Property getters
+    public IntegerProperty orderIdProperty() { return orderId; }
+    public IntegerProperty foodRatingProperty() { return foodRating; }
+    public StringProperty foodReviewProperty() { return foodReview; }
+    public IntegerProperty deliveryRatingProperty() { return deliveryRating; }
+    public StringProperty deliveryReviewProperty() { return deliveryReview; }
+    public ObjectProperty<Timestamp> ratingDateProperty() { return ratingDate; }
+}
 
 
 }
+
+
+
+
+
+
+
