@@ -65,18 +65,21 @@ public class AdminDashboard extends Application {
     
     @Override
     public void start(Stage primaryStage) {
-        
-        
+
         mainLayout = new BorderPane();
         mainContent = new VBox();
         mainContent.setPadding(new Insets(20));
         mainLayout.setCenter(mainContent); // ✅ Add mainContent to the center
 
-
         // Sidebar
         sidebar = new VBox(10);
         sidebar.setPadding(new Insets(10));
         sidebar.setStyle("-fx-background-color: #333; -fx-pref-width: 200px;");
+        
+        // Back to main button
+        Button backButton = new Button("Admin Dashboard");
+        sidebar.getChildren().add(backButton);
+        backButton.setOnAction(e -> showMainDashboard());
 
         Button menuButton = new Button("Menu");
         sidebar.getChildren().add(menuButton);
@@ -107,7 +110,27 @@ public class AdminDashboard extends Application {
         primaryStage.setScene(scene);
         primaryStage.setTitle("Admin Dashboard");
         primaryStage.show();
+        // ✅ Show admin dashboard immediately on load
+        showMainDashboard();
     }
+    
+    
+    private void showMainDashboard() {
+      mainContent.getChildren().clear();
+      System.out.println("Switching to Admin Dashboard");
+
+      ShowAdminDashboard showAdminDashboard = new ShowAdminDashboard(userID);
+      Node adminUI = showAdminDashboard.getRoot();
+
+      if (adminUI == null) {
+          System.out.println("❌ Admin UI is null!");  // Debugging
+      } else {
+          System.out.println("✅ Adding Admin UI to mainContent");
+          mainContent.getChildren().add(adminUI);
+      }
+  }
+
+    
     
 private void showRiderManagement() {
     mainContent.getChildren().clear();
