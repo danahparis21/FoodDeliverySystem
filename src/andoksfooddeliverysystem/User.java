@@ -104,8 +104,7 @@ public class User {
         }
     }
 
-     // Login method that fetches both userID and role
-   public static User login(String name, String password, Stage currentStage) {
+    public static User login(String name, String password, Stage currentStage) {
     String sql = "SELECT user_id, role FROM Users WHERE full_name = ? AND password = ?";
 
     try (Connection conn = Database.connect();
@@ -121,25 +120,50 @@ public class User {
 
             User user = new User(userID, role); // ✅ Create User object
 
-            // Open appropriate dashboard
+            // Open appropriate dashboard and update rider status if role is "rider"
             if (role.equals("admin")) {
                 new AdminDashboard(userID).start(new Stage());
             } else if (role.equals("customer")) {
                  new CustomerDashboard(userID).start(new Stage()); 
             }
-             else if (role.equals("rider")) {
-                 new RiderDashboard(userID).start(new Stage()); 
-            } 
+            else if (role.equals("rider")) {
+                // Fetch the rider_id using the user_id
+                String getRiderIdSql = "SELECT rider_id FROM riders WHERE user_id = ?";
+                try (PreparedStatement riderStmt = conn.prepareStatement(getRiderIdSql)) {
+                    riderStmt.setInt(1, userID);
+                    ResultSet riderRs = riderStmt.executeQuery();
+                    if (riderRs.next()) {
+                        int riderId = riderRs.getInt("rider_id");
+                        
+                        // Update rider's online_status to "Online"
+                        String updateStatusSql = "UPDATE riders SET online_status = 'Online', last_modified_by =?  WHERE rider_id = ?";
+                        try (PreparedStatement updateStmt = conn.prepareStatement(updateStatusSql)) {
+                            updateStmt.setInt(1, userID);
+                            updateStmt.setInt(2, riderId); // The rider whose status is being changed
+                            updateStmt.executeUpdate(); // Update the online_status to "Online"
+                        } catch (SQLException e) {
+                            e.printStackTrace();
+                            // You can log the error or notify the user if needed
+                        }
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    // You can log the error or notify the user if needed
+                }
+
+                new RiderDashboard(userID).start(new Stage());
+            }
 
             currentStage.close(); // ✅ Close login window
             return user; // ✅ Return user
         }
-    }catch (Exception e) {
+    } catch (Exception e) {
         e.printStackTrace();
     }
 
     return null; // Return null if login fails
 }
+
 
 
 

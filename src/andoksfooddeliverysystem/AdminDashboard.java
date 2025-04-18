@@ -97,6 +97,27 @@ public class AdminDashboard extends Application {
         sidebar.getChildren().add(auditLogsButton);
         auditLogsButton.setOnAction(e -> showLogs()); 
         
+         Button orderHistoryButton = new Button("Order History");
+        sidebar.getChildren().add(orderHistoryButton);
+        orderHistoryButton.setOnAction(e -> showOrderHistory()); 
+        
+         // 🔴 Log Out Button
+        Button logoutButton = new Button("Log Out");
+        sidebar.getChildren().add(logoutButton);
+        logoutButton.setOnAction(e -> {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Log Out Confirmation");
+            alert.setHeaderText(null);
+            alert.setContentText("Are you sure you want to log out?");
+
+            Optional<ButtonType> result = alert.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                primaryStage.close();            // ✅ Step 2: Close current window
+                new Main().start(new Stage());   // ✅ Step 3: Reopen login window
+            }
+        });
+
+        
         // Toggle button (placed in the main layout, not the sidebar)
         Button toggleSidebar = new Button("☰");
         toggleSidebar.setOnAction(e -> toggleSidebar());
@@ -178,6 +199,20 @@ private void showRiderManagement() {
         }
     }
 
+ private void showOrderHistory() {
+        mainContent.getChildren().clear();
+        System.out.println("Switching to ORder History");
+
+        OrderHistory showOrderHistory = new OrderHistory(userID);
+        Node orderHistoryUI = showOrderHistory.getRoot();
+
+        if (orderHistoryUI == null) {
+            System.out.println("❌ Order History UI is null!");  // Debugging
+        } else {
+            System.out.println("✅ Adding Order History UI to mainContent");
+            mainContent.getChildren().add(orderHistoryUI);
+        }
+    }
 
 
 

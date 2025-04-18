@@ -92,8 +92,7 @@ public class Main extends Application {
 
             if (loggedInUser != null) {
                 System.out.println("Login successful! User role: " + loggedInUser.getRole());
-                Alert alert = new Alert(Alert.AlertType.INFORMATION, "Login successful!", ButtonType.OK);
-                alert.showAndWait();
+                
             } else {
                 System.out.println("Invalid credentials.");
                 Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid username or password!", ButtonType.OK);
