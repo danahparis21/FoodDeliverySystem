@@ -63,7 +63,7 @@ public class CheckOutWindow {
      private static double totalPrice;
     //     private static double deliveryLabel;
 
-     static double subtotal = 0;
+     static double subtotal;
      static ComboBox<Card> savedCardComboBox = new ComboBox<>();
      static ComboBox<String> pickupTimeCombo;
      static ComboBox<String> paymentMethodComboBox = new ComboBox<>();
@@ -184,7 +184,10 @@ public class CheckOutWindow {
         // Default address toggle
         CheckBox defaultCheck = new CheckBox("Set as default address");
 
-       
+         // Address list display (ListView)
+        ListView<Address> addressListView = new ListView<>();
+        addressListView.setItems(getCustomerAddresses(customerId)); // Load customer addresses
+
       Button saveButton = new Button("Save Address");
         saveButton.setOnAction(e -> {
             if (streetField.getText().trim().isEmpty()) {
@@ -211,27 +214,39 @@ public class CheckOutWindow {
                     userId
             );
 
-            if (addressId != -1) {
-                // Clear the fields if the address was successfully saved
-                streetField.clear();
-                barangayCombo.getSelectionModel().clearSelection();
-                contactNumberField.clear();
-                defaultCheck.setSelected(false);
+                 if (addressId != -1) {
+            // Clear the fields if the address was successfully saved
+            streetField.clear();
+            barangayCombo.getSelectionModel().clearSelection();
+            contactNumberField.clear();
+            defaultCheck.setSelected(false);
 
-                // Optionally show a success message
-                showAlert("Success", "Address saved successfully!");
-            } else {
-                showAlert("Error", "Failed to save address.");
-            }
-        });
+            // Optionally show a success message
+            showAlert("Success", "Address saved successfully!");
+
+            // Fetch the updated address list and update the ListView
+            ObservableList<Address> updatedAddresses = getCustomerAddresses(customerId);
+            addressListView.setItems(updatedAddresses);
+
+            // Optionally, you can also add the new address directly to the ListView
+            // if you don't want to reload the whole list:
+            Address newAddress = new Address(addressId, streetField.getText().trim(), 
+                                             barangayCombo.getSelectionModel().getSelectedItem(), 
+                                             typeCombo.getValue(), 
+                                             defaultCheck.isSelected(), 
+                                             contactNumberField.getText().trim());
+            addressListView.getItems().add(newAddress);
+        } else {
+            showAlert("Error", "Failed to save address.");
+        }
+    });
 
         
-        // Address list display (ListView)
-        ListView<Address> addressListView = new ListView<>();
-        addressListView.setItems(getCustomerAddresses(customerId)); // Load customer addresses
-
+        
+      
         // Make the list scrollable
        addressListView.setPrefHeight(100); // or even 200
+       
 
         addressListView.setOnMouseClicked(event -> {
                  selectedAddress = addressListView.getSelectionModel().getSelectedItem();
@@ -246,6 +261,7 @@ public class CheckOutWindow {
             }
         });
 
+        
 //       
 
         deliverySection.getChildren().addAll(
@@ -394,8 +410,10 @@ public class CheckOutWindow {
             
             String itemName = getItemNameById(itemId);
             double itemPrice = getItemPriceById(itemId);
-             totalPrice = itemPrice * quantity;
-            subtotal += totalPrice;
+             double itemSubtotal = itemPrice * quantity;
+            subtotal += itemSubtotal;
+            totalPrice += itemSubtotal;
+
             
 
             // Create Item Display in Checkout
@@ -420,7 +438,7 @@ public class CheckOutWindow {
             // Add item row to the summary
             itemRow.getChildren().addAll(itemImage, namePriceBox);
             orderSummary.getChildren().add(itemRow);
-            OrderItem orderItem = new OrderItem(itemId, quantity, subtotal, itemName);
+            OrderItem orderItem = new OrderItem(itemId, quantity, itemSubtotal, itemName);
             itemsList.add(orderItem);
         }
          
@@ -475,6 +493,8 @@ public class CheckOutWindow {
         // Setup default values based on delivery type
         boolean isDelivery = deliveryTypeCombo.getValue().equals("Delivery");
         double deliveryFee = isDelivery ? 49.0 : 0.0;
+     
+subtotalLabel.setText("Subtotal: ₱" + String.format("%.2f", subtotal));
 
         deliveryLabel.setText("Delivery Fee: ₱" + String.format("%.2f", deliveryFee));
         totalLabel.setText("Total: ₱" + String.format("%.2f", subtotal + deliveryFee));
@@ -790,7 +810,7 @@ public class CheckOutWindow {
         for (Map.Entry<Integer, Integer> entry : cartItems.entrySet()) {
             int itemId = entry.getKey();
             int quantity = entry.getValue();
-            double subtotal = getItemPriceById(itemId) * quantity;
+             subtotal = getItemPriceById(itemId) * quantity;
 
             String variationText = variations.getOrDefault(itemId, null);
             String instructionsText = instructions.getOrDefault(itemId, null);
@@ -903,7 +923,7 @@ try (PreparedStatement itemsStmt = conn.prepareStatement(itemsQuery)) {
             int quantity = itemsRs.getInt("quantity");
             String variation = itemsRs.getString("variation");
             String instructions = itemsRs.getString("instructions");
-            double subtotal = itemsRs.getDouble("subtotal");
+             subtotal = itemsRs.getDouble("subtotal");
 
             orderItemsText.append("- ")
                 .append(itemName)

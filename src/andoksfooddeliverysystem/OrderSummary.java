@@ -21,7 +21,7 @@ public class OrderSummary{
     private String currentGifPath = null;
 
 
-    public void show(Order order, int userId) {
+    public Stage show(Order order, int userId) {
         Stage stage = new Stage();
         stage.setTitle("Order Summary - Order #" + order.getOrderId());
 
@@ -209,6 +209,7 @@ public class OrderSummary{
         
         stage.setScene(scene);
         stage.show();
+        return stage;
     }
         
 

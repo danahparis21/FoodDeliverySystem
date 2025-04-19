@@ -128,6 +128,8 @@ profileImage.setOnMouseClicked(e -> {
 
             sidebar.getChildren().set(sidebar.getChildren().indexOf(nameLabel), nameField);
         });
+        // Track opened stages in a list or set
+        Set<Stage> openedStages = new HashSet<>();
 
        // =====================
         // 3. Address (Clickable to Show List)
@@ -218,26 +220,32 @@ profileImage.setOnMouseClicked(e -> {
                 orderListView.getItems().add(item);
             }
 
-            // Detect double-click to show details
-            orderListView.setOnMouseClicked(event -> {
-                if (event.getClickCount() == 2) {
-                    HBox selectedBox = orderListView.getSelectionModel().getSelectedItem();
-                    if (selectedBox != null) {
-                        Label label = (Label) selectedBox.getChildren().get(0);
-                        String selectedOrderText = label.getText();
-                        int orderId = Integer.parseInt(selectedOrderText.split(" ")[1].replace("#", ""));
-                        Order selectedOrderDetails = orders.stream()
-                                .filter(order -> order.getOrderId() == orderId)
-                                .findFirst()
-                                .orElse(null);
+           // Detect double-click to show details
+        orderListView.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                HBox selectedBox = orderListView.getSelectionModel().getSelectedItem();
+                if (selectedBox != null) {
+                    Label label = (Label) selectedBox.getChildren().get(0);
+                    String selectedOrderText = label.getText();
+                    int orderId = Integer.parseInt(selectedOrderText.split(" ")[1].replace("#", ""));
 
-                        if (selectedOrderDetails != null) {
-                            OrderSummary orderSummary = new OrderSummary();
-                            orderSummary.show(selectedOrderDetails, userID);
-                        }
+                    // Find the order based on orderId
+                    Order selectedOrderDetails = orders.stream()
+                            .filter(order -> order.getOrderId() == orderId)
+                            .findFirst()
+                            .orElse(null);
+
+                    // If the order is found, show its summary
+                    if (selectedOrderDetails != null) {
+                        OrderSummary orderSummary = new OrderSummary();
+                        Stage orderSummaryStage = orderSummary.show(selectedOrderDetails, userID); // Get the stage
+
+                        // Track the opened order summary stage
+                        openedStages.add(orderSummaryStage);  // Add to the set of opened stages
                     }
                 }
-            });
+            }
+        });
 
             orderHistoryLayout.getChildren().add(orderListView);
 
@@ -252,6 +260,8 @@ profileImage.setOnMouseClicked(e -> {
                     orderHistoryStage.close();
                 }
             });
+            // Add to the set of opened stages
+                openedStages.add(orderHistoryStage);
 
             orderHistoryStage.show();
         });
@@ -260,6 +270,7 @@ profileImage.setOnMouseClicked(e -> {
 
         Button closeBtn = new Button("Close");
         closeBtn.setOnAction(e -> profileStage.close());
+        
         
         // ✅ Logout button
         Button logoutBtn = new Button("Logout");
@@ -272,9 +283,15 @@ profileImage.setOnMouseClicked(e -> {
 
             Optional<ButtonType> result = alert.showAndWait();
             if (result.isPresent() && result.get() == ButtonType.OK) {
+                // Close the main profile and dashboard windows
                 profileStage.close();
                 if (dashboardStage != null) {
                     dashboardStage.close();
+                }
+
+                // Close any additional opened stages (order history, order summary, etc.)
+                for (Stage stage : openedStages) {
+                    stage.close();
                 }
 
                 try {
@@ -286,6 +303,7 @@ profileImage.setOnMouseClicked(e -> {
                 }
             }
         });
+
 
 
 

@@ -171,19 +171,27 @@ public class CardPaymentForm {
     HBox cardDetailsRow = new HBox(20);
     cardDetailsRow.setAlignment(Pos.CENTER);
     
-    // Expiry Date Field
+   // Expiry Date Field
     VBox expiryDateBox = createFormField("Expiry Date", "MM/YY");
     TextField expiryDateField = (TextField) expiryDateBox.getChildren().get(1);
     expiryDateField.textProperty().addListener((obs, oldVal, newVal) -> {
+        // Ensure only numbers and '/' are accepted
         if (!newVal.matches("\\d*[/]?\\d*")) {
             expiryDateField.setText(oldVal);
             return;
         }
-        
+
+        // Insert '/' after the first two digits
         if (newVal.length() == 2 && oldVal.length() == 1) {
             expiryDateField.setText(newVal + "/");
         }
+
+        // Limit the length of the expiry date to 5 (MM/YY)
+        if (newVal.length() > 5) {
+            expiryDateField.setText(oldVal);
+        }
     });
+
     
     // CVC Field
     VBox cvcBox = createFormField("CVC", "123");
@@ -591,21 +599,21 @@ public void showPaymentSuccessAlert(String cardholderName, String cardNumber) {
         fadeOut.play();
     });
     
-    // Add invisible email receipt button that appears with animation
-    Button emailButton = new Button("Email Receipt");
-    emailButton.setOpacity(0);
-    emailButton.setPrefWidth(200);
-    emailButton.setPrefHeight(30);
-    emailButton.setStyle("-fx-background-color: transparent; " +
-                        "-fx-text-fill: #FF6F00; " +
-                        "-fx-font-size: 12px; " +
-                        "-fx-border-color: #FF6F00; " +
-                        "-fx-border-width: 1px; " +
-                        "-fx-border-radius: 20px; " +
-                        "-fx-background-radius: 20px;");
+//    // Add invisible email receipt button that appears with animation
+//    Button emailButton = new Button("Email Receipt");
+//    emailButton.setOpacity(0);
+//    emailButton.setPrefWidth(200);
+//    emailButton.setPrefHeight(30);
+//    emailButton.setStyle("-fx-background-color: transparent; " +
+//                        "-fx-text-fill: #FF6F00; " +
+//                        "-fx-font-size: 12px; " +
+//                        "-fx-border-color: #FF6F00; " +
+//                        "-fx-border-width: 1px; " +
+//                        "-fx-border-radius: 20px; " +
+//                        "-fx-background-radius: 20px;");
     
     // Assemble alert container
-    alertBox.getChildren().addAll(iconPane, heading, messageBox, orderInfoBox, closeButton, emailButton);
+    alertBox.getChildren().addAll(iconPane, heading, messageBox, orderInfoBox, closeButton);
     root.getChildren().add(alertBox);
     
     // Set up scene
@@ -638,17 +646,16 @@ public void showPaymentSuccessAlert(String cardholderName, String cardNumber) {
     checkmarkDraw.setOrientation(PathTransition.OrientationType.ORTHOGONAL_TO_TANGENT);
     checkmarkDraw.setInterpolator(Interpolator.EASE_OUT);
     
-    // 3. Fade in the email receipt button after everything else
-    FadeTransition emailFadeIn = new FadeTransition(Duration.millis(500), emailButton);
-    emailFadeIn.setDelay(Duration.millis(1000));
-    emailFadeIn.setFromValue(0.0);
-    emailFadeIn.setToValue(1.0);
-    
+//    // 3. Fade in the email receipt button after everything else
+//    FadeTransition emailFadeIn = new FadeTransition(Duration.millis(500), emailButton);
+//    emailFadeIn.setDelay(Duration.millis(1000));
+//    emailFadeIn.setFromValue(0.0);
+//    emailFadeIn.setToValue(1.0);
+//    
     // Create a sequence of animations
     SequentialTransition sequence = new SequentialTransition(
         new ParallelTransition(fadeIn, scaleIn),
-        checkmarkDraw,
-        emailFadeIn
+        checkmarkDraw
     );
     
     // Play the animation and show the alert
