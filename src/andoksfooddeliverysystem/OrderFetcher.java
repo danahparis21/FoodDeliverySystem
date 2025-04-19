@@ -142,7 +142,7 @@ public class OrderFetcher {
         List<Order> orders = new ArrayList<>();
 
         // SQL query to fetch orders and their associated address information for a specific customer
-        String orderQuery = "SELECT * FROM order_address_customer_view WHERE customer_id = ?";
+        String orderQuery = "SELECT * FROM order_address_view WHERE customer_id = ?";
 
         // SQL query to fetch items for a specific order
         String itemQuery = "SELECT oi.*, i.* \n" +

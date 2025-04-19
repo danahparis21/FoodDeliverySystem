@@ -28,6 +28,10 @@ import javafx.scene.image.ImageView;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
+import javax.mail.MessagingException;
+import java.sql.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 
@@ -273,7 +277,11 @@ public class ShowOrders {
 
         
           orderPickedUpButton.setOnAction(pickedUp -> {
-            markOrderPickedUp(order); // Update DB or internal state
+                try {
+                    markOrderPickedUp(order); // Update DB or internal state
+                } catch (MessagingException ex) {
+                    Logger.getLogger(ShowOrders.class.getName()).log(Level.SEVERE, null, ex);
+                }
                 readyForPickupButton.setDisable(true); 
             orderPickedUpButton.setDisable(true);
             verifyPaymentButton.setDisable(true);
@@ -301,7 +309,11 @@ public class ShowOrders {
 
           
         readyForPickupButton.setOnAction(e -> {
-            markOrderReadyForPickup(order); // Update DB or internal state
+                try {
+                    markOrderReadyForPickup(order); // Update DB or internal state
+                } catch (MessagingException ex) {
+                    Logger.getLogger(ShowOrders.class.getName()).log(Level.SEVERE, null, ex);
+                }
             readyForPickupButton.setDisable(true);  // Disable the button after it is clicked
 
             // Optionally change the status label to "Ready for Pickup"
@@ -650,7 +662,11 @@ public class ShowOrders {
 
         
           orderPickedUpButton.setOnAction(pickedUp -> {
-            markOrderPickedUp(order); // Update DB or internal state
+            try {
+                markOrderPickedUp(order); // Update DB or internal state
+            } catch (MessagingException ex) {
+                Logger.getLogger(ShowOrders.class.getName()).log(Level.SEVERE, null, ex);
+            }
             readyForPickupButton.setDisable(true); 
             orderPickedUpButton.setDisable(true);
             verifyPaymentButton.setDisable(true);
@@ -678,7 +694,11 @@ public class ShowOrders {
 
           
         readyForPickupButton.setOnAction(e -> {
-            markOrderReadyForPickup(order); // Update DB or internal state
+            try {
+                markOrderReadyForPickup(order); // Update DB or internal state
+            } catch (MessagingException ex) {
+                Logger.getLogger(ShowOrders.class.getName()).log(Level.SEVERE, null, ex);
+            }
             readyForPickupButton.setDisable(true);  // Disable the button after it is clicked
 
             // Optionally change the status label to "Ready for Pickup"
@@ -764,24 +784,59 @@ public class ShowOrders {
 
 
     
-    private void markOrderReadyForPickup(Order order) {
-    String newStatus = "Ready for Pick-up"; // Define status for pickup
-
-   
+   private void markOrderReadyForPickup(Order order) throws MessagingException {
+    String newStatus = "Ready for Pick-up";
     String updateQuery = "UPDATE orders SET status = ?, last_modified_by = ? WHERE order_id = ?";
-
 
     try (Connection connection = Database.connect(); 
          PreparedStatement preparedStatement = connection.prepareStatement(updateQuery)) {
 
         preparedStatement.setString(1, newStatus);
-        preparedStatement.setInt(2, adminId); // 👈 use the passed admin ID
+        preparedStatement.setInt(2, adminId);
         preparedStatement.setInt(3, order.getOrderId());
-
 
         int rowsAffected = preparedStatement.executeUpdate();
         if (rowsAffected > 0) {
             System.out.println("Order marked as 'Ready for Pickup' successfully!");
+
+            // Fetch customer_id and email based on customer name
+            String fetchCustomerIdQuery = "SELECT customer_id, email FROM customers WHERE name = ?";
+            try (PreparedStatement emailStmt = connection.prepareStatement(fetchCustomerIdQuery)) {
+                emailStmt.setString(1, order.getCustomerName());
+                try (ResultSet rs = emailStmt.executeQuery()) {
+                    if (rs.next()) {
+                        int customerId = rs.getInt("customer_id");
+                        String email = rs.getString("email");
+
+                        String subject = "Your Order is Ready for Pick-up! 🍗";
+                        String message = """
+                                Hi %s,
+
+                                Your order #%d is now ready for pick-up at Andok’s!
+                                Feel free to drop by anytime during our business hours.
+
+                                Thank you for choosing Andok’s!
+                                
+                                Love,  
+                                The Andok’s Team ❤️
+                                """.formatted(order.getCustomerName(), order.getOrderId());
+
+                        // Insert into notifications table
+                        String insertNotif = "INSERT INTO notifications (customer_id, message, type, notified_by) VALUES (?, ?, ?, ?)";
+                        try (PreparedStatement notifStmt = connection.prepareStatement(insertNotif)) {
+                            notifStmt.setInt(1, customerId);
+                            notifStmt.setString(2, message);
+                            notifStmt.setString(3, "order_ready_for_pickup");
+                            notifStmt.setInt(4, adminId);
+                            notifStmt.executeUpdate();
+                        }
+
+                        // Send email
+                        SendEmail.sendEmail(email, subject, message);
+                        System.out.println("Email sent to " + email);
+                    }
+                }
+            }
         } else {
             System.out.println("Failed to update the order.");
         }
@@ -789,6 +844,7 @@ public class ShowOrders {
         e.printStackTrace();
     }
 }
+
 
     
     
@@ -798,36 +854,68 @@ public class ShowOrders {
 }
 
   
-      private void markOrderPickedUp(Order order) {
-        String newStatus;
+    private void markOrderPickedUp(Order order) throws MessagingException {
+    String newStatus;
+    String subject = "";
+    String message = "";
 
-        if ("pick up".equalsIgnoreCase(order.getOrderType())) {
-            newStatus = "Completed"; // pickup = done once picked up
-        } else {
-            newStatus = "Out for Delivery"; // delivery = still needs delivery
-        }
-
-        String updateQuery = "UPDATE orders SET status = ?, last_modified_by = ? WHERE order_id = ?";
-
-
-        try (Connection connection = Database.connect(); 
-             PreparedStatement preparedStatement = connection.prepareStatement(updateQuery)) {
-
-            preparedStatement.setString(1, newStatus);
-            preparedStatement.setInt(2, adminId); // 👈 use the passed admin ID
-            preparedStatement.setInt(3, order.getOrderId());
-
-
-            int rowsAffected = preparedStatement.executeUpdate();
-            if (rowsAffected > 0) {
-                System.out.println("Order marked as '" + newStatus + "' successfully!");
-            } else {
-                System.out.println("Failed to update the order.");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    // Check order type (pickup or delivery)
+    if ("pick up".equalsIgnoreCase(order.getOrderType())) {
+        newStatus = "Completed"; // pickup = done once picked up
+        subject = "Your Order is Completed!";
+        message = "Hi there,\n\nYour order #" + order.getOrderId() + " has been successfully picked up and is now complete.\n\nThank you for choosing Andok's!\n\nDon't forget to send your ratings!⭐⭐⭐⭐⭐ \n\nBest regards, \nThe Andok's Team ❤️";
+    } else {
+        newStatus = "Out for Delivery"; // delivery = still needs delivery
+        subject = "Your Order is Out for Delivery!";
+        message = "Hi there,\n\nYour order #" + order.getOrderId() + " is now out for delivery. It will reach you shortly!\n\nThank you for your patience.\n\nBest regards, \nThe Andok's Team ❤️";
     }
+
+    // Update order status in database
+    String updateQuery = "UPDATE orders SET status = ?, last_modified_by = ? WHERE order_id = ?";
+
+    try (Connection connection = Database.connect(); 
+         PreparedStatement preparedStatement = connection.prepareStatement(updateQuery)) {
+
+        preparedStatement.setString(1, newStatus);
+        preparedStatement.setInt(2, adminId); // 👈 use the passed admin ID
+        preparedStatement.setInt(3, order.getOrderId());
+
+        int rowsAffected = preparedStatement.executeUpdate();
+        if (rowsAffected > 0) {
+            System.out.println("Order marked as '" + newStatus + "' successfully!");
+
+            // Fetch customer_id based on customerName
+            String fetchCustomerIdQuery = "SELECT customer_id, email FROM customers WHERE name = ?";
+            try (PreparedStatement emailStmt = connection.prepareStatement(fetchCustomerIdQuery)) {
+                emailStmt.setString(1, order.getCustomerName());
+                try (ResultSet rs = emailStmt.executeQuery()) {
+                    if (rs.next()) {
+                        int customerId = rs.getInt("customer_id");
+                        String email = rs.getString("email");
+
+                        // Insert notification into DB
+                        String insertNotif = "INSERT INTO notifications (customer_id, message, type, notified_by) VALUES (?, ?, ?, ?)";
+                        try (PreparedStatement notifStmt = connection.prepareStatement(insertNotif)) {
+                            notifStmt.setInt(1, customerId);
+                            notifStmt.setString(2, message);  // Notification message
+                            notifStmt.setString(3, newStatus.equals("Completed") ? "order_completed" : "order_out_for_delivery");
+                            notifStmt.setInt(4, adminId);
+                            notifStmt.executeUpdate();
+                        }
+
+                        // Send email notification using SendEmail class
+                        SendEmail.sendEmail(email, subject, message);
+                    }
+                }
+            }
+        } else {
+            System.out.println("Failed to update the order.");
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+}
+
 
 
 

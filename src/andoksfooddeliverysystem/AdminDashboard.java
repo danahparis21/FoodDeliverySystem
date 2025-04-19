@@ -40,6 +40,8 @@ import javafx.stage.Stage;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.application.Platform;
 import javafx.collections.transformation.FilteredList;
 import javafx.collections.transformation.SortedList;
@@ -48,6 +50,7 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ListView;
 
 import javafx.util.Duration;
+import javax.mail.MessagingException;
 
 public class AdminDashboard extends Application {
     private int userID;
@@ -64,7 +67,7 @@ public class AdminDashboard extends Application {
     }
     
     @Override
-    public void start(Stage primaryStage) {
+    public void start(Stage primaryStage) throws MessagingException {
 
         mainLayout = new BorderPane();
         mainContent = new VBox();
@@ -79,7 +82,13 @@ public class AdminDashboard extends Application {
         // Back to main button
         Button backButton = new Button("Admin Dashboard");
         sidebar.getChildren().add(backButton);
-        backButton.setOnAction(e -> showMainDashboard());
+        backButton.setOnAction(e -> {
+            try {
+                showMainDashboard();
+            } catch (MessagingException ex) {
+                Logger.getLogger(AdminDashboard.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        });
 
         Button menuButton = new Button("Menu");
         sidebar.getChildren().add(menuButton);
@@ -136,7 +145,7 @@ public class AdminDashboard extends Application {
     }
     
     
-    private void showMainDashboard() {
+    private void showMainDashboard() throws MessagingException {
       mainContent.getChildren().clear();
       System.out.println("Switching to Admin Dashboard");
 

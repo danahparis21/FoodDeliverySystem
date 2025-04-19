@@ -9,6 +9,8 @@ import java.sql.*;
 import java.text.DateFormatSymbols;
 import java.text.SimpleDateFormat;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.application.Platform;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
@@ -52,6 +54,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
+import javax.mail.MessagingException;
 
 
 
@@ -72,7 +75,7 @@ public class ShowAdminDashboard {
 
     private LineChart<String, Number> lineChart;
 
-    public ShowAdminDashboard(int userID) {
+    public ShowAdminDashboard(int userID) throws MessagingException {
         this.userID = userID;
         createUI();
         loadAdminDetails(userID);
@@ -89,7 +92,13 @@ public class ShowAdminDashboard {
     // Store Section
     VBox storeBox = new VBox(10, storeStatusLabel, toggleShopButton);
     storeBox.setPadding(new Insets(10));
-    toggleShopButton.setOnAction(e -> toggleShop());
+    toggleShopButton.setOnAction(e -> {
+        try {
+            toggleShop();
+        } catch (MessagingException ex) {
+            Logger.getLogger(ShowAdminDashboard.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    });
 
     // Stats Section
     VBox statsBox = new VBox(10, ordersTodayLabel, customersTodayLabel, allOrdersLabel);
@@ -140,7 +149,7 @@ public class ShowAdminDashboard {
 }
 
 
-  private void loadStoreStatus() {
+  private void loadStoreStatus() throws MessagingException {
     String query = "SELECT store_status FROM store WHERE store_id = 1";
 
     try (Connection conn = Database.connect();
@@ -184,7 +193,7 @@ public class ShowAdminDashboard {
 }
 
 
-    private void toggleShop() {
+    private void toggleShop() throws MessagingException {
         String currentStatus = storeStatusLabel.getText().contains("Open") ? "Open" : "Close";
         String newStatus = currentStatus.equals("Open") ? "Close" : "Open";
 
@@ -214,7 +223,7 @@ public class ShowAdminDashboard {
             }
         }
     }
-private void updateStoreStatus(String newStatus) {
+private void updateStoreStatus(String newStatus) throws MessagingException {
     String query = "UPDATE store SET store_status = ?, last_modified_by = ? WHERE store_id = 1";
 
     try (Connection conn = Database.connect();
@@ -229,15 +238,85 @@ private void updateStoreStatus(String newStatus) {
             toggleShopButton.setText(newStatus.equals("Open") ? "Close Shop" : "Open Shop");
             System.out.println("✅ Store status updated to: " + newStatus);
 
-            // 👇 Cancel all pending orders if store is closed
             if (newStatus.equalsIgnoreCase("Close")) {
-                System.out.println("🧪 newStatus value: " + newStatus);
+    // 👇 Cancel all pending orders placed today
+    String cancelQuery = "UPDATE orders SET status = 'Cancelled', last_modified_by = ? " +
+                         "WHERE status = 'Pending' AND DATE(order_date) = CURDATE()";
+    try (PreparedStatement cancelStmt = conn.prepareStatement(cancelQuery)) {
+        cancelStmt.setInt(1, userID);
+        int cancelled = cancelStmt.executeUpdate();
+        System.out.println("🛑 Today's pending orders cancelled: " + cancelled);
+    }
 
-                String cancelQuery = "UPDATE orders SET status = 'Cancelled', last_modified_by = ? WHERE status = 'Pending'";
-                try (PreparedStatement cancelStmt = conn.prepareStatement(cancelQuery)) {
-                    cancelStmt.setInt(1, userID);
-                    int cancelled = cancelStmt.executeUpdate();
-                    System.out.println("🛑 Pending orders cancelled: " + cancelled);
+    // 👇 Fetch customers who placed orders today
+    String fetchCustomers = """
+        SELECT DISTINCT c.customer_id, c.email 
+        FROM orders o 
+        JOIN customers c ON o.customer_id = c.customer_id 
+        WHERE DATE(o.order_date) = CURDATE()
+    """;
+
+    try (PreparedStatement customerStmt = conn.prepareStatement(fetchCustomers);
+         ResultSet rs = customerStmt.executeQuery()) {
+
+        while (rs.next()) {
+            int customerId = rs.getInt("customer_id");
+            String email = rs.getString("email");
+
+            // Insert notification into DB
+            String insertNotif = "INSERT INTO notifications (customer_id, message, type, notified_by) VALUES (?, ?, ?, ?)";
+            try (PreparedStatement notifStmt = conn.prepareStatement(insertNotif)) {
+                notifStmt.setInt(1, customerId);
+                notifStmt.setString(2, "Andok's is closed. Unfortunately, we are closed, all orders are cancelled and online payments are refunded. Thanks for your patience!");
+                notifStmt.setString(3, "store_close");
+                notifStmt.setInt(4, userID);
+                notifStmt.executeUpdate();
+            }
+
+            // Send email using existing class
+            SendEmail.sendEmail(email, "Andok's is Closed - Orders Cancelled",
+                """
+                Hi there,
+
+                We're sorry, but Andok's is currently closed for the day. 
+                All orders placed today have been cancelled and any online payments will be refunded.
+
+                We appreciate your understanding and patience. We’ll be back soon!
+
+                Love,  
+                The Andok’s Team ❤️
+                """);
+        }
+    }
+}
+
+            // 👇 Notify all customers if store is opened
+            if (newStatus.equalsIgnoreCase("Open")) {
+                String fetchCustomers = "SELECT customer_id, email FROM customers";
+                try (PreparedStatement customerStmt = conn.prepareStatement(fetchCustomers);
+                     ResultSet rs = customerStmt.executeQuery()) {
+
+                    while (rs.next()) {
+                        int customerId = rs.getInt("customer_id");
+                        String email = rs.getString("email");
+
+                        // Insert notification into DB
+                        String insertNotif = "INSERT INTO notifications (customer_id, message, type, notified_by) VALUES (?, ?, ?, ?)";
+                        try (PreparedStatement notifStmt = conn.prepareStatement(insertNotif)) {
+                            notifStmt.setInt(1, customerId);
+                            notifStmt.setString(2, "Andok's is now OPEN! Start browsing and placing your orders now!");
+                            notifStmt.setString(3, "store_open");
+                            notifStmt.setInt(4, userID);
+                            notifStmt.executeUpdate();
+                        }
+
+                        // Optionally send email
+                        SendEmail.sendEmail(email, "Andok's is Now Open!",
+                            "Hi there!\n\nAndok's is officially open! 🎉\nPlace your order now while it's hot!\n\nLove, Andok's Team");
+                    }
+
+                } catch (SQLException e) {
+                    e.printStackTrace();
                 }
             }
 

@@ -27,6 +27,8 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import java.util.Map;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.image.Image;
@@ -46,6 +48,7 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebView;
 import javafx.util.Duration;
+import javax.mail.MessagingException;
 import netscape.javascript.JSException;
 import netscape.javascript.JSObject;
 
@@ -791,58 +794,166 @@ public class CheckOutWindow {
     }
 
 
+public static int saveOrderToDatabase(int customerId, int addressId, double totalPrice, String paymentMethod, String orderType, String pickupTime, int userId) {
+    try (Connection conn = Database.connect()) {
 
-    public static int saveOrderToDatabase(int customerId, int addressId, double totalPrice, String paymentMethod, String orderType, String pickupTime, int userId) {
-     try (Connection conn = Database.connect()) {
+        // Determine payment_status based on paymentMethod
+        String paymentStatus = switch (paymentMethod) {
+            case "GCash" -> "Pending Verification";
+            case "Credit/Debit Card" -> "Paid";
+            default -> "Pending Payment";
+        };
 
-         // Determine payment_status based on paymentMethod
-         String paymentStatus;
-         switch (paymentMethod) {
-             case "GCash":
-                 paymentStatus = "Pending Verification";
-                 break;
-             case "Credit/Debit Card":
-                 paymentStatus = "Paid";
-                 break;
-             default: // Cash
-                 paymentStatus = "Pending Payment";
-                 break;
-         }
+        // Insert into orders table
+        String sql = "INSERT INTO orders (customer_id, address_id, total_price, payment_method, payment_status, status, order_type, pickup_time, last_modified_by) " +
+                     "VALUES (?, ?, ?, ?, ?, 'Pending', ?, ?, ?)";
+        PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+        pstmt.setInt(1, customerId);
+        pstmt.setInt(2, addressId);
+        pstmt.setDouble(3, totalPrice);
+        pstmt.setString(4, paymentMethod);
+        pstmt.setString(5, paymentStatus);
+        pstmt.setString(6, orderType);
+        if ("Pick Up".equalsIgnoreCase(orderType)) {
+            pstmt.setString(7, pickupTime);
+        } else {
+            pstmt.setNull(7, java.sql.Types.NULL);
+        }
+        pstmt.setInt(8, userId);
 
-         // Build the SQL query
-         String sql = "INSERT INTO orders (customer_id, address_id, total_price, payment_method, payment_status, status, order_type, pickup_time, last_modified_by) " +
-                      "VALUES (?, ?, ?, ?, ?, 'Pending', ?, ?, ?)";
+        int affectedRows = pstmt.executeUpdate();
+        if (affectedRows == 0) {
+            return -1; // Order failed
+        }
 
-         // Prepare statement and set parameters
-         PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-         pstmt.setInt(1, customerId);
-         pstmt.setInt(2, addressId);
-         pstmt.setDouble(3, totalPrice);
-         pstmt.setString(4, paymentMethod);
-         pstmt.setString(5, paymentStatus);
-         pstmt.setString(6, orderType); // 'Pick Up' or 'Delivery'
+        ResultSet rs = pstmt.getGeneratedKeys();
+        if (!rs.next()) return -1;
+        int orderId = rs.getInt(1);
 
-         if ("Pick Up".equals(orderType)) {
-             pstmt.setString(7, pickupTime);  // If it's a pickup, set pickup time
-         } else {
-             pstmt.setNull(7, java.sql.Types.NULL); // If it's delivery, set pickup time as NULL
-         }
-         pstmt.setInt(8, userId);
+        // ✅ Fetch customer name & email
+        String customerQuery = "SELECT name, email FROM customers WHERE customer_id = ?";
+        String customerName = "", email = "";
+        try (PreparedStatement customerStmt = conn.prepareStatement(customerQuery)) {
+            customerStmt.setInt(1, customerId);
+            try (ResultSet customerRs = customerStmt.executeQuery()) {
+                if (customerRs.next()) {
+                    customerName = customerRs.getString("name");
+                    email = customerRs.getString("email");
+                }
+            }
+        }
 
-         // Execute the update and get the generated order_id
-         int affectedRows = pstmt.executeUpdate();
+       // ✅ Fetch address info (if delivery)
+        String addressText = "N/A";
+        if (!"Pick Up".equalsIgnoreCase(orderType)) {
+            String addressQuery = """
+                SELECT a.street, b.barangay_name
+                FROM addresses a
+                JOIN barangay b ON a.barangay_id = b.barangay_id
+                WHERE a.address_id = ?
+                """;
 
-         if (affectedRows > 0) {
-             ResultSet rs = pstmt.getGeneratedKeys();
-             if (rs.next()) {
-                 return rs.getInt(1); // Return the generated order_id
-             }
-         }
-     } catch (SQLException ex) {
-         System.err.println("❌ Error saving order: " + ex.getMessage());
-     }
-     return -1; // If order saving failed
- }
+            try (PreparedStatement addrStmt = conn.prepareStatement(addressQuery)) {
+                addrStmt.setInt(1, addressId);
+                try (ResultSet addrRs = addrStmt.executeQuery()) {
+                    if (addrRs.next()) {
+                        String street = addrRs.getString("street");
+                        String barangayName = addrRs.getString("barangay_name");
+                        addressText = street + ", " + barangayName;
+                    }
+                }
+            }
+        }
+
+                // ✅ Fetch order items
+        StringBuilder orderItemsText = new StringBuilder();
+        String itemsQuery = """
+            SELECT m.name, oi.quantity, oi.variation, oi.instructions, oi.subtotal
+            FROM order_items oi
+            JOIN menu_items m ON oi.item_id = m.item_id
+            WHERE oi.order_id = ?
+            """;
+
+try (PreparedStatement itemsStmt = conn.prepareStatement(itemsQuery)) {
+    itemsStmt.setInt(1, orderId);
+    try (ResultSet itemsRs = itemsStmt.executeQuery()) {
+        while (itemsRs.next()) {
+            String itemName = itemsRs.getString("name");
+            int quantity = itemsRs.getInt("quantity");
+            String variation = itemsRs.getString("variation");
+            String instructions = itemsRs.getString("instructions");
+            double subtotal = itemsRs.getDouble("subtotal");
+
+            orderItemsText.append("- ")
+                .append(itemName)
+                .append(" x").append(quantity);
+
+            if (variation != null && !variation.isBlank()) {
+                orderItemsText.append(" (").append(variation).append(")");
+            }
+
+            if (instructions != null && !instructions.isBlank()) {
+                orderItemsText.append(" [").append(instructions).append("]");
+            }
+
+            orderItemsText.append(" - ₱").append(String.format("%.2f", subtotal)).append("\n");
+        }
+    }
+}
+        // ✅ Build notification & email content
+        String subject = "🛒 You placed an order! Order #" + orderId;
+        String message = """
+            Hi %s,
+
+            Thank you for placing an order with Andok's!
+            Your order #%d has been received. Here are the details:
+
+            %s
+            Total Price: ₱%.2f
+            Payment Method: %s
+            Order Type: %s
+            %s
+
+            We'll process your order shortly.
+
+            — Andok's
+            """.formatted(
+                customerName,
+                orderId,
+                orderItemsText.toString(),
+                totalPrice,
+                paymentMethod,
+                orderType,
+                "Delivery Address: " + addressText
+            );
+
+        // ✅ Insert notification
+        String notifInsert = "INSERT INTO notifications (customer_id, message, type, notified_by) VALUES (?, ?, ?, ?)";
+        try (PreparedStatement notifStmt = conn.prepareStatement(notifInsert)) {
+            notifStmt.setInt(1, customerId);
+            notifStmt.setString(2, message);
+            notifStmt.setString(3, "order_placed");
+            notifStmt.setInt(4, userId);
+            notifStmt.executeUpdate();
+        }
+
+        // ✅ Send email
+        SendEmail.sendEmail(email, subject, message);
+        System.out.println("📧 Order email sent to " + email);
+
+        return orderId;
+
+    } catch (SQLException ex) {
+        System.err.println("❌ Error saving order: " + ex.getMessage());
+        return -1;
+    }   catch (MessagingException ex) {
+            Logger.getLogger(CheckOutWindow.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    return -1;
+}
+
+
+
 
 
 

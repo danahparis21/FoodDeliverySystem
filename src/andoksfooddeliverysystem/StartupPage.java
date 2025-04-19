@@ -26,6 +26,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import javafx.application.HostServices;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
+import javafx.scene.media.MediaView;
 import javafx.scene.paint.LinearGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.paint.CycleMethod;
@@ -109,12 +112,20 @@ public class StartupPage extends Application {
         heroSection.setPrefSize(1530, 800);
         heroSection.getStyleClass().add("hero-section");
         
-        // Background with parallax effect
-        Image bgImage = new Image("file:/C:/Users/63945/Documents/AndoksFoodDeliverySystem/AndoksFoodDeliverySystem/src/icons/Andoksbg.gif");
-        ImageView bgView = new ImageView(bgImage);
-        bgView.setFitWidth(1530);
-        bgView.setFitHeight(800);
-        bgView.setPreserveRatio(false);
+        // Load the video
+        File videoFile = new File("C:/Users/63945/Documents/AndoksFoodDeliverySystem/AndoksFoodDeliverySystem/src/icons/Andoksbg.mp4");
+        Media media = new Media(videoFile.toURI().toString());
+        MediaPlayer mediaPlayer = new MediaPlayer(media);
+        mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE); // Loop the video
+        mediaPlayer.setAutoPlay(true); // Start automatically
+
+        // Create the video view
+        MediaView mediaView = new MediaView(mediaPlayer);
+        mediaView.setFitWidth(1530); // or whatever size you want
+        mediaView.setPreserveRatio(true);
+
+        // Optional: add drop shadow
+        mediaView.setEffect(new DropShadow(20, Color.color(0, 0, 0, 0.5)));
         
         // Semi-transparent overlay for better text visibility
         Rectangle overlay = new Rectangle(1530, 800);
@@ -157,7 +168,7 @@ public class StartupPage extends Application {
         heroContent.getChildren().addAll(logo, tagline, description, orderNowButton);
         
         // Add all layers to hero section
-        heroSection.getChildren().addAll(bgView, overlay, heroContent);
+        heroSection.getChildren().addAll(mediaView, overlay, heroContent);
         
         return heroSection;
     }
@@ -238,14 +249,24 @@ public class StartupPage extends Application {
         menuSection.setPrefSize(1530, 800);
         menuSection.getStyleClass().add("menu-section");
         
-        // Background image
-        Image menuBg = new Image("file:/C:/Users/63945/Documents/AndoksFoodDeliverySystem/AndoksFoodDeliverySystem/src/icons/Andoksbg2.gif");
-        ImageView bgView = new ImageView(menuBg);
-        bgView.setFitWidth(1530);
-        bgView.setFitHeight(800);
-        bgView.setPreserveRatio(false);
-        bgView.setOpacity(0.8);
-        
+       // Path to your mp4 file
+        String videoPath = "file:/C:/Users/63945/Documents/AndoksFoodDeliverySystem/AndoksFoodDeliverySystem/src/icons/Andoksbg2.mp4";
+
+        // Load media and player
+        Media bgMedia = new Media(videoPath);
+        MediaPlayer mediaPlayer = new MediaPlayer(bgMedia);
+
+        // Auto-play, loop, and mute (if you don't want sound)
+        mediaPlayer.setAutoPlay(true);
+        mediaPlayer.setCycleCount(MediaPlayer.INDEFINITE);
+        mediaPlayer.setMute(true);
+
+        // Set up media view like an image view
+        MediaView bgVideo = new MediaView(mediaPlayer);
+        bgVideo.setFitWidth(1530);
+        bgVideo.setFitHeight(800);
+        bgVideo.setPreserveRatio(false);
+        bgVideo.setOpacity(0.8); // same opacity as before
         // Background overlay with gradient
         Rectangle overlay = new Rectangle(1530, 800);
         Stop[] stops = new Stop[] {
@@ -354,7 +375,7 @@ public class StartupPage extends Application {
         content.getChildren().addAll(menuTitle, carouselContainer, navigationButtons, viewAllButton);
         
         // Add all layers to menu section
-        menuSection.getChildren().addAll(bgView, overlay, content);
+        menuSection.getChildren().addAll(bgVideo, overlay, content);
         
         return menuSection;
     }

@@ -13,8 +13,12 @@ import javafx.stage.Stage;
 import java.sql.SQLException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javax.mail.MessagingException;
 
 public class PaymentVerificationWindow {
 
@@ -60,7 +64,11 @@ public class PaymentVerificationWindow {
     declineBtn.setOnAction(de -> {
         
         updatePaymentStatus(order.getOrderId(), "Payment Declined");
-         updateOrderStatus(order.getOrderId(), "Cancelled", adminId);
+            try {
+                updateOrderStatus(order.getOrderId(), "Cancelled", adminId);
+            } catch (MessagingException ex) {
+                Logger.getLogger(PaymentVerificationWindow.class.getName()).log(Level.SEVERE, null, ex);
+            }
          
 
         order.setPaymentStatus("Payment Declined");
@@ -95,19 +103,68 @@ public class PaymentVerificationWindow {
     verificationStage.show();
 }
    
-   private static void updateOrderStatus(int orderId, String newStatus, int adminId) {
-    String updateQuery = "UPDATE orders SET status = ?, updated_by = ? WHERE order_id = ?";
+  private static void updateOrderStatus(int orderId, String newStatus, int adminId) throws MessagingException {
+    String updateQuery = "UPDATE orders SET status = ?, last_modified_by = ? WHERE order_id = ?";
 
-    try (Connection connection = Database.connect(); 
+    try (Connection connection = Database.connect();
          PreparedStatement preparedStatement = connection.prepareStatement(updateQuery)) {
 
         preparedStatement.setString(1, newStatus);
-        preparedStatement.setInt(2, adminId);  // Correct position for adminId
-        preparedStatement.setInt(3, orderId);  // Correct position for orderId
+        preparedStatement.setInt(2, adminId);
+        preparedStatement.setInt(3, orderId);
 
         int rowsAffected = preparedStatement.executeUpdate();
         if (rowsAffected > 0) {
             System.out.println("Order status updated to: " + newStatus);
+
+            // Only notify if it's a cancellation due to declined payment
+            if ("Cancelled".equalsIgnoreCase(newStatus)) {
+                // Fetch customer details
+                String fetchCustomerQuery = """
+                        SELECT c.customer_id, c.email, c.name
+                        FROM orders o
+                        JOIN customers c ON o.customer_id = c.customer_id
+                        WHERE o.order_id = ?
+                        """;
+                try (PreparedStatement customerStmt = connection.prepareStatement(fetchCustomerQuery)) {
+                    customerStmt.setInt(1, orderId);
+                    try (ResultSet rs = customerStmt.executeQuery()) {
+                        if (rs.next()) {
+                            int customerId = rs.getInt("customer_id");
+                            String email = rs.getString("email");
+                            String name = rs.getString("name");
+
+                            String subject = "Order Cancelled - Payment Declined";
+                            String message = """
+                                    Hi %s,
+
+                                    Unfortunately, your order #%d has been cancelled because your payment could not be verified.
+
+                                    If this was a mistake or you’d like to place a new order, feel free to try again with a valid payment.
+
+                                    Thank you for understanding.
+
+                                    - The Andok's Team
+                                    """.formatted(name, orderId);
+
+                            // Insert into notifications
+                            String insertNotif = "INSERT INTO notifications (customer_id, message, type, notified_by) VALUES (?, ?, ?, ?)";
+                            try (PreparedStatement notifStmt = connection.prepareStatement(insertNotif)) {
+                                notifStmt.setInt(1, customerId);
+                                notifStmt.setString(2, message);
+                                notifStmt.setString(3, "payment_declined");
+                                notifStmt.setInt(4, adminId);
+                                notifStmt.executeUpdate();
+                            }
+
+                            // Send email
+                            SendEmail.sendEmail(email, subject, message);
+                            System.out.println("Payment decline email sent to: " + email);
+                        }
+                    }
+                }
+            }
+
         } else {
             System.out.println("Failed to update order status.");
         }
@@ -115,6 +172,7 @@ public class PaymentVerificationWindow {
         e.printStackTrace();
     }
 }
+
 
 
 

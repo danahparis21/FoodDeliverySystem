@@ -14,6 +14,7 @@ import java.sql.Statement;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 
 import java.util.List;
 import java.util.Map;
@@ -118,7 +119,39 @@ public class CustomerDashboard extends Application {
             
         // 🔔 Notification Button
         Button notifBtn = new Button("🔔");
+        notifBtn.setStyle("-fx-background-color: #f8f9fa; -fx-padding: 5px;");
         notifBtn.setOnAction(e -> showNotification());
+
+       // 🔢 Notification count badge
+        Label notifCountLabel = new Label();
+        notifCountLabel.setStyle(
+            "-fx-background-color: #e74c3c;" +
+            "-fx-text-fill: white;" +
+            "-fx-font-size: 10px;" +
+            "-fx-padding: 1px 4px;" +
+            "-fx-background-radius: 10;" +
+            "-fx-min-width: 16px;" +
+            "-fx-alignment: center;" +
+            "-fx-font-weight: bold;"
+        );
+        notifCountLabel.setVisible(false); // Hide if no unread notifications
+
+        // 🔁 Function to update the count dynamically
+        int customerId = getCustomerIdFromUserId(userID);
+        int unreadCount = getUnreadNotificationCount(customerId);
+
+        if (unreadCount > 0) {
+            notifCountLabel.setText(String.valueOf(unreadCount));
+            notifCountLabel.setVisible(true);  // Show if there's a count > 0
+        } else {
+            notifCountLabel.setVisible(false); // Hide if no unread notifications
+        }
+
+        // 📦 Stack notif button and badge
+        StackPane notifButtonPane = new StackPane();
+        notifButtonPane.getChildren().addAll(notifBtn, notifCountLabel);
+        StackPane.setAlignment(notifCountLabel, Pos.TOP_RIGHT);
+        StackPane.setMargin(notifCountLabel, new Insets(-2, -2, 0, 0));  // Position adjustment
 
         // 👤 Profile Button
         Button profileBtn = new Button("👤");
@@ -145,7 +178,22 @@ public class CustomerDashboard extends Application {
             cartCountLabel.setVisible(count > 0);
         });
 }
-
+private int getUnreadNotificationCount(int customerId) {
+    String query = "SELECT COUNT(*) FROM notifications WHERE customer_id = ? AND is_read = 0";
+    try (Connection conn = Database.connect();
+         PreparedStatement stmt = conn.prepareStatement(query)) {
+        stmt.setInt(1, customerId);
+        ResultSet rs = stmt.executeQuery();
+        if (rs.next()) {
+            int count = rs.getInt(1);
+            System.out.println("Unread Notifications Count: " + count); // Debugging line
+            return count;
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+    return 0;
+}
 
    
     
@@ -272,18 +320,125 @@ private void loadCategoryItems(int categoryId) {
         e.printStackTrace();
     }
 }
+private int getCustomerIdFromUserId(int userId) {
+    String sql = "SELECT customer_id FROM customers WHERE user_id = ?";
+    try (Connection conn = Database.connect();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+        stmt.setInt(1, userId);
+        ResultSet rs = stmt.executeQuery();
+
+        if (rs.next()) {
+            return rs.getInt("customer_id");
+        }
+
+    } catch (SQLException ex) {
+        System.err.println("❌ Error fetching customer ID: " + ex.getMessage());
+    }
+    return -1; // return invalid ID if not found
+}
 
 
-  
+ private void showNotification() {
+  // Replace with your session logic
+    int customerId = getCustomerIdFromUserId(userID); // ✅ Fetch based on userID
+    System.out.println("Fetching notifications from " + customerId);
 
-   
-   
+    if (customerId == -1) {
+        Alert alert = new Alert(Alert.AlertType.ERROR, "Unable to fetch notifications (no customer found).", ButtonType.OK);
+        alert.showAndWait();
+        return;
+    }
+    List<Notification> notifications = fetchNotifications(customerId);
 
-    private void showNotification() {
+    if (notifications.isEmpty()) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION, "No new notifications.", ButtonType.OK);
         alert.showAndWait();
+        return;
     }
-    
+
+    // Create a dialog
+    Dialog<Void> dialog = new Dialog<>();
+    dialog.setTitle("🔔 Notifications");
+
+    VBox notificationList = new VBox(10);
+    notificationList.setPadding(new Insets(10));
+
+    for (Notification notif : notifications) {
+        String snippet = notif.message.length() > 50
+                ? notif.message.substring(0, 50) + "..."
+                : notif.message;
+
+        Label label = new Label(snippet);
+        label.setStyle("""
+            -fx-background-color: #f9f9f9;
+            -fx-padding: 10px;
+            -fx-border-color: #cccccc;
+            -fx-border-width: 1px;
+            -fx-border-radius: 8px;
+            -fx-background-radius: 8px;
+            -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 4, 0, 0, 2);
+        """);
+        label.setMaxWidth(Double.MAX_VALUE);
+        label.setWrapText(true);
+
+        label.setOnMouseClicked(e -> {
+            Alert fullMessage = new Alert(Alert.AlertType.INFORMATION);
+            fullMessage.setTitle("📨 Full Notification");
+            fullMessage.setHeaderText("From Andok's");
+            fullMessage.setContentText(notif.message);
+            fullMessage.showAndWait();
+
+            markAsRead(notif.notificationId);
+        });
+
+        notificationList.getChildren().add(label);
+    }
+
+    ScrollPane scrollPane = new ScrollPane(notificationList);
+    scrollPane.setFitToWidth(true);
+    scrollPane.setPrefHeight(400);
+
+    dialog.getDialogPane().setContent(scrollPane);
+    dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
+    dialog.showAndWait();
+}
+ 
+ private List<Notification> fetchNotifications(int customerId) {
+    List<Notification> list = new ArrayList<>();
+    String sql = "SELECT notification_id, message FROM notifications WHERE customer_id = ? ORDER BY notification_id DESC";
+    System.out.println("Fetching notifications from " + customerId);
+    try (Connection conn = Database.connect();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+        stmt.setInt(1, customerId);
+        ResultSet rs = stmt.executeQuery();
+
+        while (rs.next()) {
+            int id = rs.getInt("notification_id");
+            String msg = rs.getString("message");
+            list.add(new Notification(id, msg));
+        }
+
+    } catch (SQLException ex) {
+        System.err.println("❌ Error fetching notifications: " + ex.getMessage());
+    }
+    return list;
+}
+private void markAsRead(int notificationId) {
+    String sql = "UPDATE notifications SET is_read = 1 WHERE notification_id = ?";
+    try (Connection conn = Database.connect();
+         PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+        stmt.setInt(1, notificationId);
+        stmt.executeUpdate();
+
+    } catch (SQLException ex) {
+        System.err.println("❌ Error marking notification as read: " + ex.getMessage());
+    }
+}
+
+
   
        private void showCart() {
     if (CartSession.getCartItems().isEmpty()) {
