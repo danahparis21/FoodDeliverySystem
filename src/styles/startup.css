@@ -1,0 +1,107 @@
+/* styles.css */
+.root {
+    -fx-font-family: 'Montserrat', sans-serif;
+}
+
+/* ScrollPane customization */
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-padding: 0 0 0 0;
+}
+
+.scroll-pane .scroll-bar:vertical .thumb {
+    -fx-background-color: #e74c3c;
+    -fx-background-radius: 5em;
+}
+
+/* Buttons */
+.button {
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 5, 0, 0, 2);
+}
+
+.outline-button {
+    -fx-background-color: transparent;
+    -fx-border-color: #e74c3c;
+    -fx-border-width: 2px;
+    -fx-text-fill: #e74c3c;
+    -fx-border-radius: 30px;
+    -fx-background-radius: 30px;
+    -fx-font-weight: bold;
+    -fx-padding: 10px 20px;
+}
+
+.outline-button:hover {
+    -fx-background-color: #e74c3c;
+    -fx-text-fill: white;
+    -fx-cursor: hand;
+}
+
+.cart-button:hover {
+    -fx-effect: dropshadow(three-pass-box, rgba(231,76,60,0.5), 10, 0, 0, 3);
+}
+
+/* Menu Card */
+.menu-card {
+    -fx-background-color: white;
+    -fx-background-radius: 15px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 10, 0, 0, 5);
+    -fx-cursor: hand;
+}
+
+/* Text fields */
+.text-field {
+    -fx-background-radius: 0;
+    -fx-border-width: 0 0 0 0;
+    -fx-background-color: #ecf0f1;
+    -fx-padding: 10px;
+    -fx-font-size: 14px;
+}
+
+/* Separator */
+.separator {
+    -fx-background-color: rgba(255,255,255,0.3);
+    -fx-opacity: 0.6;
+}
+
+/* Hyperlinks */
+.hyperlink {
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+    -fx-underline: false;
+}
+
+.hyperlink:hover {
+    -fx-text-fill: #e74c3c;
+}
+
+/* Animations */
+.fade-in {
+    -fx-opacity: 0;
+}
+
+.slide-in-left {
+    -fx-opacity: 0;
+    -fx-translate-x: -100;
+}
+
+.slide-in-right {
+    -fx-opacity: 0;
+    -fx-translate-x: 100;
+}
+
+.slide-in-bottom {
+    -fx-opacity: 0;
+    -fx-translate-y: 100;
+}

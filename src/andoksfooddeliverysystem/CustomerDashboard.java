@@ -156,6 +156,8 @@ public class CustomerDashboard extends Application {
         itemBox.setStyle("-fx-background-color: #f8f8f8; -fx-border-radius: 10px; -fx-padding: 10px;");
 
         ImageView imageView = new ImageView(new Image("file:" + imagePath));
+        
+
         imageView.setFitWidth(120);
         imageView.setFitHeight(120);
 

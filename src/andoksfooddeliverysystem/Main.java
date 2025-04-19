@@ -14,17 +14,21 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-public class Main extends Application {
+public  class Main extends Application {
     private boolean darkMode = false;
     private Scene scene;
     private Label title;
-
+    
     @Override
     public void start(Stage primaryStage) {
+        showLogin(primaryStage);
+    }
+
+   public  void showLogin(Stage stage) {
         VBox root = new VBox(15);
         root.setStyle("-fx-padding: 30; -fx-alignment: center;");
 
-        title = new Label("Welcome! Please Log In");
+         title = new Label("Login to Andok's");
         title.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: black;");
 
         TextField usernameField = new TextField();
@@ -104,8 +108,9 @@ public class Main extends Application {
         Button signUpBtn = new Button("Sign Up");
         signUpBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px;");
         signUpBtn.setOnAction(e -> {
-            Stage stage = (Stage) ((Node) e.getSource()).getScene().getWindow(); // Get current stage
-            stage.close();  // Close current window
+            Stage currentStage = (Stage) ((Node) e.getSource()).getScene().getWindow();
+            currentStage.close();  // Close current window
+     
 
             // Open SignUp window
             Signup signUpWindow = new Signup();
@@ -146,13 +151,13 @@ public class Main extends Application {
 
         root.getChildren().addAll(title, usernameField, passwordContainer, buttonContainer, toggleThemeBtn);
 
-        primaryStage.setScene(scene);
-        primaryStage.setTitle("Login Screen");
-        primaryStage.setWidth(400);
-        primaryStage.setHeight(800);
+        stage.setScene(scene);
+        stage.setTitle("Login Screen");
+        stage.setWidth(400);
+        stage.setHeight(800);
 
 
-        primaryStage.show();
+        stage.show();
     }
 
     private void applyFadeAnimation(javafx.scene.Node... nodes) {
