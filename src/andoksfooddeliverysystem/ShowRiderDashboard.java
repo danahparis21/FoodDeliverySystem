@@ -101,9 +101,9 @@ public class ShowRiderDashboard {
         profileBox.setPadding(new Insets(15));
         profileBox.setStyle("-fx-border-color: #e0e0e0; -fx-border-width: 1; -fx-border-radius: 5; -fx-background-color: #f9f9f9;");
         
-        notificationButton.setText("\uD83D\uDD14"); // Unicode bell icon 🛎️
-        notificationButton.setStyle("-fx-font-size: 16px; -fx-background-color: transparent;");
-        
+//        notificationButton.setText("\uD83D\uDD14"); // Unicode bell icon 🛎️
+//        notificationButton.setStyle("-fx-font-size: 16px; -fx-background-color: transparent;");
+//        
         HBox headerBox = new HBox(15);
         headerBox.setAlignment(Pos.CENTER_LEFT);
         headerBox.getChildren().addAll(riderImageView, new VBox(5, 
@@ -114,7 +114,7 @@ public class ShowRiderDashboard {
         // --- WRAP EVERYTHING WITH NOTIFICATION BUTTON ON THE LEFT ---
         HBox profileBoxWrapper = new HBox(10);
         profileBoxWrapper.setPadding(new Insets(10));
-        profileBoxWrapper.getChildren().addAll( headerBox, notificationButton);
+        profileBoxWrapper.getChildren().addAll( headerBox);
 
         
          statusCircle = new Circle(5);
@@ -138,8 +138,6 @@ public class ShowRiderDashboard {
         );
         
       
-
-        
         // Style elements
         riderNameLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
         riderStatusLabel.setStyle("-fx-font-weight: bold;");

@@ -15,7 +15,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 import java.sql.PreparedStatement;
 import java.sql.Connection;
-import java.sql.SQLException;
+import java.sql.*;
 
 public class OrderSummary{
     private String currentGifPath = null;
@@ -239,22 +239,22 @@ public class OrderSummary{
 //    autoRefresh.play(); // start it
 
     private boolean cancelOrder(int orderId, int userId) {
-        String updateQuery = "UPDATE orders SET status = 'Cancelled', payment_status = 'Cancelled', last_modified_by = ? WHERE order_id = ?";
+     String sql = "{CALL CancelOrder(?, ?)}";
 
-        try (Connection connection = Database.connect();
-             PreparedStatement statement = connection.prepareStatement(updateQuery)) {
+     try (Connection conn = Database.connect();
+          CallableStatement stmt = conn.prepareCall(sql)) {
 
-            statement.setInt(1, userId); // 👈 set the updater here
-            statement.setInt(2, orderId);
-            int rowsUpdated = statement.executeUpdate();
+         stmt.setInt(1, orderId);
+         stmt.setInt(2, userId);
 
-            return rowsUpdated > 0;
+         int rowsAffected = stmt.executeUpdate();
+         return rowsAffected > 0;
 
-        } catch (SQLException ex) {
-            ex.printStackTrace();
-            return false;
-        }
-    }
+     } catch (SQLException e) {
+         e.printStackTrace();
+         return false;
+     }
+ }
 
 
    private String getGifForStatus(String status) {

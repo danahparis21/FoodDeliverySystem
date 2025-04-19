@@ -61,12 +61,13 @@ public class CheckOutWindow {
     private static int addressId = -1;
     private static Address selectedAddress;
      private static double totalPrice;
+    //     private static double deliveryLabel;
 
      static double subtotal = 0;
      static ComboBox<Card> savedCardComboBox = new ComboBox<>();
      static ComboBox<String> pickupTimeCombo;
      static ComboBox<String> paymentMethodComboBox = new ComboBox<>();
-     
+     static Label deliveryLabel;
    
 
         static {
@@ -81,6 +82,12 @@ public class CheckOutWindow {
           int customerId = getCustomerIdFromUserId(userId);
 
         System.out.println("✅ Checkout opened for User ID: " + userId + ", Customer ID: " + customerId);
+        subtotal = 0.0;
+        totalPrice = 0.0;
+        //deliveryLabel = 0.0;
+        deliveryLabel = new Label("Delivery Fee: ₱49");
+        subtotalLabel = new Label("Subtotal: ₱" + String.format("%.2f", subtotal));
+        totalLabel = new Label("Total: ₱" + String.format("%.2f", subtotal + 49)); // or whatever logic you have
 
 
         Stage checkoutStage = new Stage();
@@ -148,7 +155,9 @@ public class CheckOutWindow {
         ComboBox<String> deliveryTypeCombo = new ComboBox<>();
         deliveryTypeCombo.getItems().addAll("Delivery", "For Pick Up");
         deliveryTypeCombo.setValue("Enter Shipping Address (Delivery)");
-        
+      // ✅ Manually call the update logic once
+        updateDeliveryAndTotal(deliveryTypeCombo, deliveryLabel, totalLabel);
+
         
         // === DELIVERY SECTION ===
         VBox deliverySection = new VBox(10);
@@ -329,25 +338,24 @@ public class CheckOutWindow {
         // === TOGGLE BETWEEN DELIVERY & PICKUP ===
              
          deliveryTypeCombo.setOnAction(e -> {
-             boolean isPickup = deliveryTypeCombo.getValue().equals("For Pick Up");
-             deliverySection.setVisible(!isPickup);
-             pickupSection.setVisible(isPickup);
+            boolean isPickup = deliveryTypeCombo.getValue().equals("For Pick Up");
+            deliverySection.setVisible(!isPickup);
+            pickupSection.setVisible(isPickup);
 
-             // 🔁 Update payment methods based on order type
-             paymentMethodComboBox.getItems().clear();
+            paymentMethodComboBox.getItems().clear();
 
-             if (isPickup) {
-                 // Only show prepaid options for pickup
-                 paymentMethodComboBox.getItems().addAll("Credit/Debit Card", "GCash");
-                 paymentMethodComboBox.setValue("Credit/Debit Card"); // set default for pickup
-                  showInfo("Only prepaid methods (Card or GCash) are allowed for pickup orders.");
+            if (isPickup) {
+                paymentMethodComboBox.getItems().addAll("Credit/Debit Card", "GCash");
+                paymentMethodComboBox.setValue("Credit/Debit Card");
+                showInfo("Only prepaid methods (Card or GCash) are allowed for pickup orders.");
+            } else {
+                paymentMethodComboBox.getItems().addAll("Cash", "Credit/Debit Card", "GCash");
+                paymentMethodComboBox.setValue("Cash");
+            }
 
-             } else {
-                 // Show all options including Cash for delivery
-                 paymentMethodComboBox.getItems().addAll("Cash", "Credit/Debit Card", "GCash");
-                 paymentMethodComboBox.setValue("Cash"); // set default for delivery
-             }
-         });
+            // ✅ Call the update method here
+            updateDeliveryAndTotal(deliveryTypeCombo, deliveryLabel, totalLabel);
+        });
 
 
         addressSection.getChildren().addAll(
@@ -463,10 +471,15 @@ public class CheckOutWindow {
         } 
     });
 
-        // Total Labels
-        Label subtotalLabel = new Label("Subtotal: ₱" + String.format("%.2f", subtotal));
-        Label deliveryLabel = new Label("Delivery Fee: ₱49");
-        Label totalLabel = new Label("Total: ₱" + String.format("%.2f", subtotal + 49));
+     
+        // Setup default values based on delivery type
+        boolean isDelivery = deliveryTypeCombo.getValue().equals("Delivery");
+        double deliveryFee = isDelivery ? 49.0 : 0.0;
+
+        deliveryLabel.setText("Delivery Fee: ₱" + String.format("%.2f", deliveryFee));
+        totalLabel.setText("Total: ₱" + String.format("%.2f", subtotal + deliveryFee));
+        totalPrice = subtotal + deliveryFee; // Set initial total
+
         
         Button placeOrderBtn = new Button("Place Order");
         placeOrderBtn.setOnAction(e -> {
@@ -481,7 +494,7 @@ public class CheckOutWindow {
             }
             
             // If it's pickup, but no time slots are available
-            if (deliveryTypeCombo.getValue().equals("For Pick Up") && pickupTimeCombo.getValue().equals("No available time slots")) {
+            if (deliveryTypeCombo.getValue().equals("For Pick Up") && pickupTimeCombo.getValue().equals("No available time slots") &&  pickupTimeCombo.getValue().equals("Select Pickup Time")) {
                 showAlert("Error", "Pick-Up Unavailable, please use Delivery");
                 totalPrice = subtotal + 49.00;  // Adding delivery feedanah
                 return;
@@ -757,6 +770,14 @@ public class CheckOutWindow {
 
      return cards;
  }
+    private static void updateDeliveryAndTotal(ComboBox<String> deliveryTypeCombo, Label deliveryLabel, Label totalLabel) {
+    boolean isDelivery = "Delivery".equals(deliveryTypeCombo.getValue());
+    double fee = isDelivery ? 49.0 : 0.0;
+    deliveryLabel.setText("Delivery Fee: ₱" + String.format("%.2f", fee));
+    totalLabel.setText("Total: ₱" + String.format("%.2f", subtotal + fee));
+    totalPrice = subtotal + fee;
+}
+
 
    
     // Method to save order items to the database
@@ -928,14 +949,15 @@ try (PreparedStatement itemsStmt = conn.prepareStatement(itemsQuery)) {
             );
 
         // ✅ Insert notification
-        String notifInsert = "INSERT INTO notifications (customer_id, message, type, notified_by) VALUES (?, ?, ?, ?)";
-        try (PreparedStatement notifStmt = conn.prepareStatement(notifInsert)) {
+        String callNotifProc = "{CALL InsertNotification(?, ?, ?, ?)}";
+        try (CallableStatement notifStmt = conn.prepareCall(callNotifProc)) {
             notifStmt.setInt(1, customerId);
             notifStmt.setString(2, message);
             notifStmt.setString(3, "order_placed");
-            notifStmt.setInt(4, userId);
+            notifStmt.setInt(4, userId); // User placing the order
             notifStmt.executeUpdate();
         }
+
 
         // ✅ Send email
         SendEmail.sendEmail(email, subject, message);

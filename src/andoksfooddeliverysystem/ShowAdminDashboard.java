@@ -263,15 +263,16 @@ private void updateStoreStatus(String newStatus) throws MessagingException {
             int customerId = rs.getInt("customer_id");
             String email = rs.getString("email");
 
-            // Insert notification into DB
-            String insertNotif = "INSERT INTO notifications (customer_id, message, type, notified_by) VALUES (?, ?, ?, ?)";
-            try (PreparedStatement notifStmt = conn.prepareStatement(insertNotif)) {
+             // 🔁 Reuse the stored procedure instead of raw INSERT
+            String callNotifProc = "{CALL InsertNotification(?, ?, ?, ?)}";
+            try (CallableStatement notifStmt = conn.prepareCall(callNotifProc)) {
                 notifStmt.setInt(1, customerId);
                 notifStmt.setString(2, "Andok's is closed. Unfortunately, we are closed, all orders are cancelled and online payments are refunded. Thanks for your patience!");
                 notifStmt.setString(3, "store_close");
                 notifStmt.setInt(4, userID);
                 notifStmt.executeUpdate();
             }
+
 
             // Send email using existing class
             SendEmail.sendEmail(email, "Andok's is Closed - Orders Cancelled",
@@ -291,31 +292,41 @@ private void updateStoreStatus(String newStatus) throws MessagingException {
 }
 
             // 👇 Notify all customers if store is opened
-            if (newStatus.equalsIgnoreCase("Open")) {
-                String fetchCustomers = "SELECT customer_id, email FROM customers";
-                try (PreparedStatement customerStmt = conn.prepareStatement(fetchCustomers);
-                     ResultSet rs = customerStmt.executeQuery()) {
+           if (newStatus.equalsIgnoreCase("Open")) {
+        String fetchCustomers = "SELECT customer_id, email FROM customers";
+        try (PreparedStatement customerStmt = conn.prepareStatement(fetchCustomers);
+             ResultSet rs = customerStmt.executeQuery()) {
 
-                    while (rs.next()) {
-                        int customerId = rs.getInt("customer_id");
-                        String email = rs.getString("email");
+        while (rs.next()) {
+            int customerId = rs.getInt("customer_id");
+            String email = rs.getString("email");
 
-                        // Insert notification into DB
-                        String insertNotif = "INSERT INTO notifications (customer_id, message, type, notified_by) VALUES (?, ?, ?, ?)";
-                        try (PreparedStatement notifStmt = conn.prepareStatement(insertNotif)) {
-                            notifStmt.setInt(1, customerId);
-                            notifStmt.setString(2, "Andok's is now OPEN! Start browsing and placing your orders now!");
-                            notifStmt.setString(3, "store_open");
-                            notifStmt.setInt(4, userID);
-                            notifStmt.executeUpdate();
-                        }
+            // ✅ Call the reusable procedure
+            String callNotifProc = "{CALL InsertNotification(?, ?, ?, ?)}";
+            try (CallableStatement notifStmt = conn.prepareCall(callNotifProc)) {
+                notifStmt.setInt(1, customerId);
+                notifStmt.setString(2, "Andok's is now OPEN! Start browsing and placing your orders now!");
+                notifStmt.setString(3, "store_open");
+                notifStmt.setInt(4, userID); // who triggered the open
+                notifStmt.executeUpdate();
+            }
 
-                        // Optionally send email
-                        SendEmail.sendEmail(email, "Andok's is Now Open!",
-                            "Hi there!\n\nAndok's is officially open! 🎉\nPlace your order now while it's hot!\n\nLove, Andok's Team");
-                    }
+            // 💌 Optional: send email
+            SendEmail.sendEmail(
+                email,
+                "Andok's is Now Open!",
+                """
+                Hi there!
 
-                } catch (SQLException e) {
+                Andok's is officially open! 🎉
+                Place your order now while it's hot!
+
+                Love, Andok's Team
+                """
+            );
+        }
+
+    } catch (SQLException e) {
                     e.printStackTrace();
                 }
             }

@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.Parent;
 
 public class CustomerProfile {
@@ -188,34 +189,50 @@ profileImage.setOnMouseClicked(e -> {
         
        Button historyBtn = new Button("View Order History");
         historyBtn.setOnAction(e -> {
-            // Fetch orders for the current customer (using the customer's ID)
             List<Order> orders = OrderFetcher.fetchOrdersbyCustomerID(customer.getCustomerId());
 
-            // Create a new window to show the order history
+            // Sort orders by orderId in descending order
+            orders.sort((o1, o2) -> Integer.compare(o2.getOrderId(), o1.getOrderId()));
+
             Stage orderHistoryStage = new Stage();
             orderHistoryStage.setTitle("Order History");
             VBox orderHistoryLayout = new VBox(10);
             orderHistoryLayout.setPadding(new Insets(10));
 
             // ListView to display orders
-            ListView<String> orderListView = new ListView<>();
-            orderListView.getItems().addAll(orders.stream()
-                    .map(order -> "Order #" + order.getOrderId() + " - " + order.getOrderDate())
-                    .collect(Collectors.toList()));
+            ListView<HBox> orderListView = new ListView<>();
 
-            // Event handler to view order details when an order is selected
+            for (Order order : orders) {
+                Label label = new Label("Order #" + order.getOrderId() + " - " + order.getOrderDate());
+
+                // Color-coding based on status
+                String status = order.getOrderStatus().toLowerCase();
+                if (status.equals("completed")) {
+                    label.setTextFill(Color.GREEN);
+                } else if (status.equals("cancelled")) {
+                    label.setTextFill(Color.RED);
+                }
+
+                HBox item = new HBox(label);
+                item.setPadding(new Insets(5));
+                orderListView.getItems().add(item);
+            }
+
+            // Detect double-click to show details
             orderListView.setOnMouseClicked(event -> {
                 if (event.getClickCount() == 2) {
-                    String selectedOrder = orderListView.getSelectionModel().getSelectedItem();
-                    if (selectedOrder != null) {
-                        int orderId = Integer.parseInt(selectedOrder.split(" ")[1].replace("#", ""));
+                    HBox selectedBox = orderListView.getSelectionModel().getSelectedItem();
+                    if (selectedBox != null) {
+                        Label label = (Label) selectedBox.getChildren().get(0);
+                        String selectedOrderText = label.getText();
+                        int orderId = Integer.parseInt(selectedOrderText.split(" ")[1].replace("#", ""));
                         Order selectedOrderDetails = orders.stream()
                                 .filter(order -> order.getOrderId() == orderId)
                                 .findFirst()
                                 .orElse(null);
 
                         if (selectedOrderDetails != null) {
-                             OrderSummary orderSummary = new OrderSummary();
+                            OrderSummary orderSummary = new OrderSummary();
                             orderSummary.show(selectedOrderDetails, userID);
                         }
                     }
@@ -226,6 +243,16 @@ profileImage.setOnMouseClicked(e -> {
 
             Scene scene = new Scene(orderHistoryLayout, 400, 300);
             orderHistoryStage.setScene(scene);
+
+            // Close when clicking outside
+            orderHistoryStage.initModality(Modality.WINDOW_MODAL);
+            orderHistoryStage.initOwner(((Node)e.getSource()).getScene().getWindow());
+            orderHistoryStage.focusedProperty().addListener((obs, wasFocused, isNowFocused) -> {
+                if (!isNowFocused) {
+                    orderHistoryStage.close();
+                }
+            });
+
             orderHistoryStage.show();
         });
 

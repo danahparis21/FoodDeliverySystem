@@ -10,12 +10,12 @@ public class SendEmail {
         String from = "andoks.new21@gmail.com"; // Sender's Gmail
         String host = "smtp.gmail.com";         // Gmail SMTP server
 
-        // Set properties for the mail session
-        Properties properties = System.getProperties();
-        properties.put("mail.smtp.host", host);
-        properties.put("mail.smtp.port", "587"); // TLS port
-        properties.put("mail.smtp.starttls.enable", "true");
+        Properties properties = new Properties(); // Use new Properties(), not System.getProperties()
         properties.put("mail.smtp.auth", "true");
+        properties.put("mail.smtp.starttls.enable", "true");
+        properties.put("mail.smtp.host", "smtp.gmail.com");
+        properties.put("mail.smtp.port", "587");
+
 
         // Authenticator to pass Gmail credentials
         Session session = Session.getInstance(properties, new Authenticator() {

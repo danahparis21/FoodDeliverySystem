@@ -12,15 +12,19 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
 import java.sql.ResultSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -34,6 +38,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javax.mail.MessagingException;
 
 
 public class AssignedOrders {
@@ -282,24 +287,43 @@ public class AssignedOrders {
                     Image image = new Image("file:" + imagePath);
                     imageView.setImage(image);
 
-                    uploadProofButton.setDisable(true);
+                   // uploadProofButton.setDisable(true);
                     completeOrderButton.setDisable(false);
                 }
             });
 
             completeOrderButton.setOnAction(pickedUp -> {
-            markOrderCompleted(order, userId);
-            completeOrderButton.setDisable(true);
-            order.setOrderStatus("completed"); // Update internal status
-            statusLabel.setText("Completed");
-            statusLabel.setTextFill(Color.GREEN);
-            statusCircle.setFill(Color.GREEN);
-            orderBox.setStyle("-fx-background-color: #d3d3d3;"); // Light gray color
-            ordersContainer.getChildren().remove(orderBox);  
-            ordersContainer.getChildren().add(orderBox);    
+            // Confirmation dialog
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Confirm Completion");
+            alert.setHeaderText("Are you sure you want to complete this order?");
+            alert.setContentText("This action will notify the customer and cannot be undone.");
 
-            
+            // Show dialog and wait for user response
+            Optional<ButtonType> result = alert.showAndWait();
+
+            if (result.isPresent() && result.get() == ButtonType.OK) {
+                try {
+                    markOrderCompleted(order, userId);
+                } catch (MessagingException ex) {
+                    Logger.getLogger(AssignedOrders.class.getName()).log(Level.SEVERE, null, ex);
+                }
+
+                completeOrderButton.setDisable(true);
+                order.setOrderStatus("completed"); // Update internal status
+                statusLabel.setText("Completed");
+                statusLabel.setTextFill(Color.GREEN);
+                statusCircle.setFill(Color.GREEN);
+                orderBox.setStyle("-fx-background-color: #d3d3d3;"); // Light gray color
+
+                ordersContainer.getChildren().remove(orderBox);  
+                ordersContainer.getChildren().add(orderBox);
+            } else {
+                // Optional: log or handle cancellation
+                System.out.println("Order completion canceled.");
+            }
         });
+
 
            // Expand/collapse button
             Button expandButton = new Button("▼ Show Details");
@@ -597,24 +621,43 @@ public class AssignedOrders {
                     Image image = new Image("file:" + imagePath);
                     imageView.setImage(image);
 
-                    uploadProofButton.setDisable(true);
+                   // uploadProofButton.setDisable(true);
                     completeOrderButton.setDisable(false);
                 }
             });
 
-            completeOrderButton.setOnAction(pickedUp -> {
-            markOrderCompleted(order, userId);
+      completeOrderButton.setOnAction(pickedUp -> {
+        // Confirmation dialog
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Confirm Completion");
+        alert.setHeaderText("Are you sure you want to complete this order?");
+        alert.setContentText("This action will notify the customer and cannot be undone.");
+
+        // Show dialog and wait for user response
+        Optional<ButtonType> result = alert.showAndWait();
+
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                markOrderCompleted(order, userId);
+            } catch (MessagingException ex) {
+                Logger.getLogger(AssignedOrders.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
             completeOrderButton.setDisable(true);
             order.setOrderStatus("completed"); // Update internal status
             statusLabel.setText("Completed");
             statusLabel.setTextFill(Color.GREEN);
             statusCircle.setFill(Color.GREEN);
             orderBox.setStyle("-fx-background-color: #d3d3d3;"); // Light gray color
-            ordersContainer.getChildren().remove(orderBox);  
-            ordersContainer.getChildren().add(orderBox);    
 
-            
-        });
+            ordersContainer.getChildren().remove(orderBox);  
+            ordersContainer.getChildren().add(orderBox);
+        } else {
+            // Optional: log or handle cancellation
+            System.out.println("Order completion canceled.");
+        }
+    });
+
 
            // Expand/collapse button
             Button expandButton = new Button("▼ Show Details");
@@ -703,29 +746,60 @@ public void uploadProofOfDelivery(Order order, String imagePath, int userId) {
 }
 
     
-    // Method to mark the order as picked up in the database
-        private void markOrderCompleted(Order order, int userId) {
-            String updateQuery = "UPDATE orders SET status = 'Completed' , last_modified_by = ? WHERE order_id = ?";
-       
+   private void markOrderCompleted(Order order, int riderId) throws MessagingException {
+    String newStatus;
+    String subject = "";
+    String message = "";
+
+   
+        newStatus = "Completed";
+        subject = "Your Order is Completed!";
+        message = "Hi there,\n\nYour order #" + order.getOrderId() + " has been successfully picked up and is now complete.\n\nThank you for choosing Andok's!\n\nDon't forget to send your ratings! ⭐⭐⭐⭐⭐\n\nBest regards,\nThe Andok's Team ❤️";
+    
+
+    String updateQuery = "UPDATE orders SET status = ?, last_modified_by = ? WHERE order_id = ?";
+
+    try (Connection connection = Database.connect();
+         PreparedStatement preparedStatement = connection.prepareStatement(updateQuery)) {
+
+        preparedStatement.setString(1, newStatus);
+        preparedStatement.setInt(2, riderId); // 👈 Set by the rider
+        preparedStatement.setInt(3, order.getOrderId());
+
+        int rowsAffected = preparedStatement.executeUpdate();
+        if (rowsAffected > 0) {
+            System.out.println("✅ Order updated to '" + newStatus + "'");
+
+            String callProc = "{CALL GetCustomerDetailsByName(?)}";
+            try (CallableStatement procStmt = connection.prepareCall(callProc)) {
+                procStmt.setString(1, order.getCustomerName());
+                try (ResultSet rs = procStmt.executeQuery()) {
+                    if (rs.next()) {
+                        int customerId = rs.getInt("customer_id");
+                        String email = rs.getString("email");
+
+                       String callNotifProc = "{CALL InsertNotification(?, ?, ?, ?)}";
+                        try (CallableStatement notifStmt = connection.prepareCall(callNotifProc)) {
+                            notifStmt.setInt(1, customerId);
+                            notifStmt.setString(2, message);
+                            notifStmt.setString(3, newStatus.equals("Completed") ? "order_completed" : "order_out_for_delivery");
+                            notifStmt.setInt(4, riderId); // Rider sending the notification
+                            notifStmt.executeUpdate();
+                        }
 
 
-            try (Connection connection = Database.connect(); 
-                 PreparedStatement preparedStatement = connection.prepareStatement(updateQuery)) {
-
-                 preparedStatement.setInt(1, userId); 
-                preparedStatement.setInt(2, order.getOrderId()); // Set the order_id
-
-                int rowsAffected = preparedStatement.executeUpdate();
-                if (rowsAffected > 0) {
-                    System.out.println("Order marked as Completed successfully! Thank you for your Hardwork!");
-                } else {
-                    System.out.println("Failed to mark the order.");
+                        // Send email
+                        SendEmail.sendEmail(email, subject, message);
+                    }
                 }
-            } catch (SQLException e) {
-                e.printStackTrace();
             }
+        } else {
+            System.out.println("❌ Failed to update order status.");
         }
-
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+}
 
  
 

@@ -155,6 +155,8 @@ public  class Main extends Application {
         stage.setTitle("Login Screen");
         stage.setWidth(400);
         stage.setHeight(800);
+        
+        
 
 
         stage.show();

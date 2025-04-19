@@ -432,10 +432,11 @@ public class ShowOrders {
                         case "Order # Descending":
                             return Integer.compare(o2.getOrderId(), o1.getOrderId());
                         case "Most Recent":
-                            return o1.getOrderDate().compareTo(o2.getOrderDate());
+                             return o2.getOrderDate().compareTo(o1.getOrderDate());
+                           
                            
                         case "Oldest":
-                             return o2.getOrderDate().compareTo(o1.getOrderDate());
+                             return o1.getOrderDate().compareTo(o2.getOrderDate());
                         default:
                             return 0;
                     }
@@ -800,13 +801,14 @@ public class ShowOrders {
             System.out.println("Order marked as 'Ready for Pickup' successfully!");
 
             // Fetch customer_id and email based on customer name
-            String fetchCustomerIdQuery = "SELECT customer_id, email FROM customers WHERE name = ?";
-            try (PreparedStatement emailStmt = connection.prepareStatement(fetchCustomerIdQuery)) {
-                emailStmt.setString(1, order.getCustomerName());
-                try (ResultSet rs = emailStmt.executeQuery()) {
+            String callProc = "{CALL GetCustomerDetailsByName(?)}";
+            try (CallableStatement procStmt = connection.prepareCall(callProc)) {
+                procStmt.setString(1, order.getCustomerName());
+                try (ResultSet rs = procStmt.executeQuery()) {
                     if (rs.next()) {
                         int customerId = rs.getInt("customer_id");
                         String email = rs.getString("email");
+
 
                         String subject = "Your Order is Ready for Pick-up! 🍗";
                         String message = """
@@ -821,15 +823,15 @@ public class ShowOrders {
                                 The Andok’s Team ❤️
                                 """.formatted(order.getCustomerName(), order.getOrderId());
 
-                        // Insert into notifications table
-                        String insertNotif = "INSERT INTO notifications (customer_id, message, type, notified_by) VALUES (?, ?, ?, ?)";
-                        try (PreparedStatement notifStmt = connection.prepareStatement(insertNotif)) {
-                            notifStmt.setInt(1, customerId);
-                            notifStmt.setString(2, message);
-                            notifStmt.setString(3, "order_ready_for_pickup");
-                            notifStmt.setInt(4, adminId);
-                            notifStmt.executeUpdate();
-                        }
+                      String callNotifProc = "{CALL InsertNotification(?, ?, ?, ?)}";
+                    try (CallableStatement notifStmt = connection.prepareCall(callNotifProc)) {
+                        notifStmt.setInt(1, customerId);
+                        notifStmt.setString(2, message);
+                        notifStmt.setString(3, "order_ready_for_pickup");
+                        notifStmt.setInt(4, adminId);
+                        notifStmt.executeUpdate();
+                    }
+
 
                         // Send email
                         SendEmail.sendEmail(email, subject, message);
@@ -885,23 +887,23 @@ public class ShowOrders {
             System.out.println("Order marked as '" + newStatus + "' successfully!");
 
             // Fetch customer_id based on customerName
-            String fetchCustomerIdQuery = "SELECT customer_id, email FROM customers WHERE name = ?";
-            try (PreparedStatement emailStmt = connection.prepareStatement(fetchCustomerIdQuery)) {
-                emailStmt.setString(1, order.getCustomerName());
-                try (ResultSet rs = emailStmt.executeQuery()) {
+            String callProc = "{CALL GetCustomerDetailsByName(?)}";
+            try (CallableStatement procStmt = connection.prepareCall(callProc)) {
+                procStmt.setString(1, order.getCustomerName());
+                try (ResultSet rs = procStmt.executeQuery()) {
                     if (rs.next()) {
                         int customerId = rs.getInt("customer_id");
                         String email = rs.getString("email");
 
-                        // Insert notification into DB
-                        String insertNotif = "INSERT INTO notifications (customer_id, message, type, notified_by) VALUES (?, ?, ?, ?)";
-                        try (PreparedStatement notifStmt = connection.prepareStatement(insertNotif)) {
-                            notifStmt.setInt(1, customerId);
-                            notifStmt.setString(2, message);  // Notification message
-                            notifStmt.setString(3, newStatus.equals("Completed") ? "order_completed" : "order_out_for_delivery");
-                            notifStmt.setInt(4, adminId);
-                            notifStmt.executeUpdate();
-                        }
+                        String callNotifProc = "{CALL InsertNotification(?, ?, ?, ?)}";
+                    try (CallableStatement notifStmt = connection.prepareCall(callNotifProc)) {
+                        notifStmt.setInt(1, customerId);
+                        notifStmt.setString(2, message);
+                        notifStmt.setString(3, newStatus.equals("Completed") ? "order_completed" : "order_out_for_delivery");
+                        notifStmt.setInt(4, adminId);
+                        notifStmt.executeUpdate();
+                    }
+
 
                         // Send email notification using SendEmail class
                         SendEmail.sendEmail(email, subject, message);
@@ -972,9 +974,7 @@ public class ShowOrders {
         Connection connection = connect();
 
         String updateQuery = "UPDATE orders SET rider_id = ?, last_modified_by = ? WHERE order_id = ?";
-       
-
-
+  
         try (PreparedStatement preparedStatement = connection.prepareStatement(updateQuery)) {
             preparedStatement.setInt(1, riderId);
             preparedStatement.setInt(2, adminId);

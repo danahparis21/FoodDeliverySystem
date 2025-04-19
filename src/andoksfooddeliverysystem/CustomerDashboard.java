@@ -1,4 +1,5 @@
 package andoksfooddeliverysystem;
+import java.sql.CallableStatement;
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -19,6 +20,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import javafx.application.Platform;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
+import javafx.scene.text.TextAlignment;
+import java.sql.Types;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 public class CustomerDashboard extends Application {
@@ -37,7 +42,12 @@ public class CustomerDashboard extends Application {
     @Override
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
-        
+        // Check if the store is open
+        if (!isStoreOpen()) {
+            showStoreClosedWindow();
+            return;  // Skip the rest of the dashboard setup if store is closed
+        }
+
         mainLayout = new BorderPane();
         
           // Fetch and display customer details based on userID
@@ -75,7 +85,48 @@ public class CustomerDashboard extends Application {
         primaryStage.show();
     }
     
-   
+   private boolean isStoreOpen() {
+    String query = "{CALL GetStoreStatus()}"; // Stored procedure call
+
+    try (Connection conn = Database.connect();
+         CallableStatement stmt = conn.prepareCall(query);
+         ResultSet rs = stmt.executeQuery()) {
+
+        if (rs.next()) {
+            String status = rs.getString("store_status");
+            System.out.println("✅ Store status checked: " + status);
+            return status.equalsIgnoreCase("Open");
+        }
+    } catch (SQLException e) {
+        e.printStackTrace();
+    }
+
+    return false; // Default to false if something goes wrong
+}
+
+
+
+    private void showStoreClosedWindow() {
+    Stage closedStage = new Stage();
+    closedStage.setTitle("Store Closed");
+
+    VBox layout = new VBox(20);
+    layout.setPadding(new Insets(30));
+    layout.setAlignment(Pos.CENTER);
+
+    Label message = new Label("🚫 Store is currently closed!");
+    message.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+    
+    Label note = new Label("We will notify you once the store is open again. Please check back later!");
+    note.setWrapText(true);
+    note.setTextAlignment(TextAlignment.CENTER);
+
+    layout.getChildren().addAll(message, note);
+
+    Scene scene = new Scene(layout, 400, 200);
+    closedStage.setScene(scene);
+    closedStage.show();
+}
 
 
     private HBox createTopBar() {
@@ -179,21 +230,32 @@ public class CustomerDashboard extends Application {
         });
 }
 private int getUnreadNotificationCount(int customerId) {
-    String query = "SELECT COUNT(*) FROM notifications WHERE customer_id = ? AND is_read = 0";
+    String query = "{CALL GetUnreadNotificationCount(?, ?)}"; // Call the stored procedure
+    int unreadCount = 0;
+
     try (Connection conn = Database.connect();
-         PreparedStatement stmt = conn.prepareStatement(query)) {
+         CallableStatement stmt = conn.prepareCall(query)) {
+        
+        // Set the input parameter (customerId)
         stmt.setInt(1, customerId);
-        ResultSet rs = stmt.executeQuery();
-        if (rs.next()) {
-            int count = rs.getInt(1);
-            System.out.println("Unread Notifications Count: " + count); // Debugging line
-            return count;
-        }
+
+        // Register the output parameter for unread count
+        stmt.registerOutParameter(2, Types.INTEGER);
+
+        // Execute the stored procedure
+        stmt.execute();
+
+        // Retrieve the output value (unread count)
+        unreadCount = stmt.getInt(2);
+        System.out.println("Unread Notifications Count: " + unreadCount); // Debugging line
+
     } catch (SQLException e) {
         e.printStackTrace();
     }
-    return 0;
+
+    return unreadCount;
 }
+
 
    
     
@@ -247,45 +309,51 @@ private int getUnreadNotificationCount(int customerId) {
 
     
 
-     private void loadCategories() {
-     sideBar.getChildren().clear(); // Clear previous items
-    String query = "SELECT category_name, category_id FROM categories"; 
-
-    try (Connection conn = Database.connect();
-         PreparedStatement stmt = conn.prepareStatement(query);
-         ResultSet rs = stmt.executeQuery()) {
-
-        while (rs.next()) {
-            String category = rs.getString("category_name");
-            Button categoryBtn = new Button(category);
-            categoryBtn.setMaxWidth(Double.MAX_VALUE);
-            int categoryID = rs.getInt("category_id");
-            categoryBtn.setOnAction(e -> loadCategoryItems(categoryID)); // ✅ Load menu items on click
-            sideBar.getChildren().add(categoryBtn);
-        }
-
-    } catch (SQLException e) {
-        e.printStackTrace();
-    }
-}
-     
-      private void fetchCustomerData(int userID) {
-        String sql = "SELECT * FROM Customers WHERE user_id = ?";
+    private void loadCategories() {
+        sideBar.getChildren().clear(); // Clear previous items
+        String query = "{CALL GetCategories()}"; // Stored procedure call
 
         try (Connection conn = Database.connect();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+             CallableStatement stmt = conn.prepareCall(query);
+             ResultSet rs = stmt.executeQuery()) {
 
-            stmt.setInt(1, userID);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                String customerName = rs.getString("name");
-                System.out.println("Welcome, " + customerName + "!");
+            while (rs.next()) {
+                String category = rs.getString("category_name");
+                Button categoryBtn = new Button(category);
+                categoryBtn.setMaxWidth(Double.MAX_VALUE);
+                int categoryID = rs.getInt("category_id");
+                categoryBtn.setOnAction(e -> loadCategoryItems(categoryID)); // ✅ Load menu items on click
+                sideBar.getChildren().add(categoryBtn);
             }
-        } catch (Exception e) {
+
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
+
+     
+    private void fetchCustomerData(int userID) {
+    String query = "{CALL GetCustomerDataByUserId(?)}"; // Stored procedure call
+
+    try (Connection conn = Database.connect();
+         CallableStatement stmt = conn.prepareCall(query)) {
+
+        // Set input parameter (userID)
+        stmt.setInt(1, userID);
+
+        // Execute the stored procedure
+        ResultSet rs = stmt.executeQuery();
+
+        if (rs.next()) {
+            String customerName = rs.getString("name");
+            System.out.println("Welcome, " + customerName + "!");
+        }
+
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+
 
 private void loadCategoryItems(int categoryId) {
     menuGrid.getChildren().clear();
@@ -320,23 +388,35 @@ private void loadCategoryItems(int categoryId) {
         e.printStackTrace();
     }
 }
-private int getCustomerIdFromUserId(int userId) {
-    String sql = "SELECT customer_id FROM customers WHERE user_id = ?";
-    try (Connection conn = Database.connect();
-         PreparedStatement stmt = conn.prepareStatement(sql)) {
+        private int getCustomerIdFromUserId(int userId) {
+            String query = "{CALL GetCustomerIdFromUserId(?, ?)}"; // Stored procedure call
+            int customerId = -1;
 
-        stmt.setInt(1, userId);
-        ResultSet rs = stmt.executeQuery();
+            try (Connection conn = Database.connect();
+                 CallableStatement stmt = conn.prepareCall(query)) {
 
-        if (rs.next()) {
-            return rs.getInt("customer_id");
+                // Set input parameter (userId)
+                stmt.setInt(1, userId);
+
+                // Register output parameter (customerId)
+                stmt.registerOutParameter(2, Types.INTEGER);
+
+                // Execute the stored procedure
+                stmt.execute();
+
+                // Get the result (customerId)
+                customerId = stmt.getInt(2);
+
+                System.out.println("Customer ID: " + customerId); // Debugging line
+
+            } catch (SQLException ex) {
+                System.err.println("❌ Error fetching customer ID: " + ex.getMessage());
+            }
+
+            return customerId;
         }
 
-    } catch (SQLException ex) {
-        System.err.println("❌ Error fetching customer ID: " + ex.getMessage());
-    }
-    return -1; // return invalid ID if not found
-}
+
 
 
  private void showNotification() {

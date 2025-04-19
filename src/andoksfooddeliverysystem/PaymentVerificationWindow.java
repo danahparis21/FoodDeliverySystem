@@ -13,7 +13,7 @@ import javafx.stage.Stage;
 import java.sql.SQLException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.sql.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.scene.paint.Color;
@@ -148,14 +148,14 @@ public class PaymentVerificationWindow {
                                     """.formatted(name, orderId);
 
                             // Insert into notifications
-                            String insertNotif = "INSERT INTO notifications (customer_id, message, type, notified_by) VALUES (?, ?, ?, ?)";
-                            try (PreparedStatement notifStmt = connection.prepareStatement(insertNotif)) {
-                                notifStmt.setInt(1, customerId);
-                                notifStmt.setString(2, message);
-                                notifStmt.setString(3, "payment_declined");
-                                notifStmt.setInt(4, adminId);
-                                notifStmt.executeUpdate();
-                            }
+                          String sql = "{CALL InsertNotification(?, ?, ?, ?)}";
+                        try (CallableStatement stmt = connection.prepareCall(sql)) {
+                            stmt.setInt(1, customerId);
+                            stmt.setString(2, message);
+                            stmt.setString(3, "payment_declined");
+                            stmt.setInt(4, adminId);
+                            stmt.executeUpdate();
+                        }
 
                             // Send email
                             SendEmail.sendEmail(email, subject, message);
