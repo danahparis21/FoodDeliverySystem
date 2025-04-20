@@ -18,6 +18,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Connection;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -443,17 +444,39 @@ private VBox createFormField(String labelText, String promptText) {
     field.getChildren().addAll(label, textField);
     return field;
 }
-
-// Helper method for card validation
 private boolean validateCardDetails(String cardNumber, String expiryDate, String cvc, String cardholderName) {
-    // Basic validation - improve this based on your requirements
+    // Basic validations
     if (cardNumber == null || cardNumber.length() < 15 || cardNumber.length() > 19) return false;
     if (expiryDate == null || !expiryDate.matches("\\d{2}/\\d{2}")) return false;
     if (cvc == null || cvc.length() < 3) return false;
     if (cardholderName == null || cardholderName.trim().isEmpty()) return false;
-    
-    return true;
+
+    // Validate expiration date is in the future
+    String[] parts = expiryDate.split("/");
+    try {
+        int enteredMonth = Integer.parseInt(parts[0]);
+        int enteredYear = Integer.parseInt(parts[1]) + 2000; // Convert YY to YYYY (e.g., 25 -> 2025)
+
+        // Get current month and year
+        LocalDate now = LocalDate.now();
+        int currentMonth = now.getMonthValue();
+        int currentYear = now.getYear();
+
+        // Check for valid month
+        if (enteredMonth < 1 || enteredMonth > 12) return false;
+
+        // Check if expiration is in the future
+        if (enteredYear < currentYear || (enteredYear == currentYear && enteredMonth < currentMonth)) {
+            return false; // Card is expired
+        }
+
+    } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+        return false; // Invalid format or parsing issue
+    }
+
+    return true; // All good
 }
+
 
 // Drag helper class
 private static class Delta {

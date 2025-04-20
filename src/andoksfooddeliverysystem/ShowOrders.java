@@ -30,8 +30,10 @@ import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
 import javax.mail.MessagingException;
 import java.sql.*;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.scene.control.ButtonType;
 
 
 
@@ -276,18 +278,33 @@ public class ShowOrders {
             });
 
         
-          orderPickedUpButton.setOnAction(pickedUp -> {
-                try {
-                    markOrderPickedUp(order); // Update DB or internal state
-                } catch (MessagingException ex) {
-                    Logger.getLogger(ShowOrders.class.getName()).log(Level.SEVERE, null, ex);
-                }
-                readyForPickupButton.setDisable(true); 
+        orderPickedUpButton.setOnAction(pickedUp -> {
+        String orderTypeLower = orderType.toLowerCase(); // "delivery" or "pick up"
+        String message = "Are you sure this order has been picked up?";
+        String details = "This will complete the order and notify the customer.";
+
+        if ("delivery".equals(orderTypeLower)) {
+            message = "Are you sure this order is now Out for Delivery?";
+            details = "This will notify the customer that their order is out for delivery.";
+        }
+
+        Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmAlert.setTitle("Confirm Order Status");
+        confirmAlert.setHeaderText(message);
+        confirmAlert.setContentText(details);
+
+        Optional<ButtonType> result = confirmAlert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            try {
+                markOrderPickedUp(order); // Update DB or internal state
+            } catch (MessagingException ex) {
+                Logger.getLogger(ShowOrders.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
+            readyForPickupButton.setDisable(true); 
             orderPickedUpButton.setDisable(true);
             verifyPaymentButton.setDisable(true);
             assignToRiderButton.setDisable(true);
-
-            String orderTypeLower = orderType.toLowerCase(); // "delivery" or "pick up"
 
             if ("delivery".equals(orderTypeLower)) {
                 order.setOrderStatus("out for delivery"); // Update internal status
@@ -305,26 +322,36 @@ public class ShowOrders {
             orderBox.setStyle("-fx-background-color: #d3d3d3;");
             ordersContainer.getChildren().remove(orderBox);
             ordersContainer.getChildren().add(orderBox);
-        });
+        }
+    });
 
           
         readyForPickupButton.setOnAction(e -> {
+            Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+            confirmAlert.setTitle("Confirm Ready for Pickup");
+            confirmAlert.setHeaderText("Are you sure you want to mark this order as Ready for Pickup?");
+            confirmAlert.setContentText("This will notify the customer that their order is ready.");
+
+            Optional<ButtonType> result = confirmAlert.showAndWait();
+            if (result.isPresent() && result.get() == ButtonType.OK) {
                 try {
                     markOrderReadyForPickup(order); // Update DB or internal state
                 } catch (MessagingException ex) {
                     Logger.getLogger(ShowOrders.class.getName()).log(Level.SEVERE, null, ex);
                 }
-            readyForPickupButton.setDisable(true);  // Disable the button after it is clicked
 
-            // Optionally change the status label to "Ready for Pickup"
-            statusLabel.setText("Ready for Pickup");
-            statusLabel.setTextFill(Color.BLUE);  // A distinct color for "Ready for Pickup"
-            statusCircle.setFill(Color.BLUE);  // Color of the status circle to blue
+                readyForPickupButton.setDisable(true);  // Disable the button after it is clicked
 
-            // Optional: visually update the order box to reflect this state
-            orderBox.setStyle("-fx-background-color: #add8e6;"); // Light blue to indicate ready for pickup
-         
+                // Optionally change the status label to "Ready for Pickup"
+                statusLabel.setText("Ready for Pickup");
+                statusLabel.setTextFill(Color.BLUE);  // A distinct color for "Ready for Pickup"
+                statusCircle.setFill(Color.BLUE);  // Color of the status circle to blue
+
+                // Optional: visually update the order box to reflect this state
+                orderBox.setStyle("-fx-background-color: #add8e6;"); // Light blue to indicate ready for pickup
+            }
         });
+
             
 //             System.out.println("Checking order " + order.getOrderId());
 //            System.out.println("Payment Status: " + order.getPaymentStatus());
@@ -662,56 +689,79 @@ public class ShowOrders {
             });
 
         
-          orderPickedUpButton.setOnAction(pickedUp -> {
-            try {
-                markOrderPickedUp(order); // Update DB or internal state
-            } catch (MessagingException ex) {
-                Logger.getLogger(ShowOrders.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            readyForPickupButton.setDisable(true); 
-            orderPickedUpButton.setDisable(true);
-            verifyPaymentButton.setDisable(true);
-            assignToRiderButton.setDisable(true);
+             orderPickedUpButton.setOnAction(pickedUp -> {
+                String orderTypeLower = orderType.toLowerCase(); // "delivery" or "pick up"
+                String message = "Are you sure this order has been picked up?";
+                String details = "This will complete the order and notify the customer.";
 
-            String orderTypeLower = orderType.toLowerCase(); // "delivery" or "pick up"
+                if ("delivery".equals(orderTypeLower)) {
+                    message = "Are you sure this order is now Out for Delivery?";
+                    details = "This will notify the customer that their order is out for delivery.";
+                }
 
-            if ("delivery".equals(orderTypeLower)) {
-                order.setOrderStatus("out for delivery"); // Update internal status
-                statusLabel.setText("Out for Delivery");
-                statusLabel.setTextFill(Color.GOLD);
-                statusCircle.setFill(Color.GOLD);
-            } else if ("pick up".equals(orderTypeLower)) {
-                order.setOrderStatus("completed"); // Update internal status
-                statusLabel.setText("Completed");
-                statusLabel.setTextFill(Color.GREEN);
-                statusCircle.setFill(Color.GREEN);
-            }
+                Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                confirmAlert.setTitle("Confirm Order Status");
+                confirmAlert.setHeaderText(message);
+                confirmAlert.setContentText(details);
 
-            // Optional: visually "gray out" the order to show it’s done
-            orderBox.setStyle("-fx-background-color: #d3d3d3;");
-            ordersContainer.getChildren().remove(orderBox);
-            ordersContainer.getChildren().add(orderBox);
-        });
+                Optional<ButtonType> result = confirmAlert.showAndWait();
+                if (result.isPresent() && result.get() == ButtonType.OK) {
+                    try {
+                        markOrderPickedUp(order); // Update DB or internal state
+                    } catch (MessagingException ex) {
+                        Logger.getLogger(ShowOrders.class.getName()).log(Level.SEVERE, null, ex);
+                    }
 
-          
-        readyForPickupButton.setOnAction(e -> {
-            try {
-                markOrderReadyForPickup(order); // Update DB or internal state
-            } catch (MessagingException ex) {
-                Logger.getLogger(ShowOrders.class.getName()).log(Level.SEVERE, null, ex);
-            }
-            readyForPickupButton.setDisable(true);  // Disable the button after it is clicked
+                    readyForPickupButton.setDisable(true); 
+                    orderPickedUpButton.setDisable(true);
+                    verifyPaymentButton.setDisable(true);
+                    assignToRiderButton.setDisable(true);
 
-            // Optionally change the status label to "Ready for Pickup"
-            statusLabel.setText("Ready for Pickup");
-            statusLabel.setTextFill(Color.BLUE);  // A distinct color for "Ready for Pickup"
-            statusCircle.setFill(Color.BLUE);  // Color of the status circle to blue
+                    if ("delivery".equals(orderTypeLower)) {
+                        order.setOrderStatus("out for delivery"); // Update internal status
+                        statusLabel.setText("Out for Delivery");
+                        statusLabel.setTextFill(Color.GOLD);
+                        statusCircle.setFill(Color.GOLD);
+                    } else if ("pick up".equals(orderTypeLower)) {
+                        order.setOrderStatus("completed"); // Update internal status
+                        statusLabel.setText("Completed");
+                        statusLabel.setTextFill(Color.GREEN);
+                        statusCircle.setFill(Color.GREEN);
+                    }
 
-            // Optional: visually update the order box to reflect this state
-            orderBox.setStyle("-fx-background-color: #add8e6;"); // Light blue to indicate ready for pickup
-         
-        });
-            
+                    // Optional: visually "gray out" the order to show it’s done
+                    orderBox.setStyle("-fx-background-color: #d3d3d3;");
+                    ordersContainer.getChildren().remove(orderBox);
+                    ordersContainer.getChildren().add(orderBox);
+                }
+            });
+
+
+                readyForPickupButton.setOnAction(e -> {
+                    Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                    confirmAlert.setTitle("Confirm Ready for Pickup");
+                    confirmAlert.setHeaderText("Are you sure you want to mark this order as Ready for Pickup?");
+                    confirmAlert.setContentText("This will notify the customer that their order is ready.");
+
+                    Optional<ButtonType> result = confirmAlert.showAndWait();
+                    if (result.isPresent() && result.get() == ButtonType.OK) {
+                        try {
+                            markOrderReadyForPickup(order); // Update DB or internal state
+                        } catch (MessagingException ex) {
+                            Logger.getLogger(ShowOrders.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+
+                        readyForPickupButton.setDisable(true);  // Disable the button after it is clicked
+
+                        // Optionally change the status label to "Ready for Pickup"
+                        statusLabel.setText("Ready for Pickup");
+                        statusLabel.setTextFill(Color.BLUE);  // A distinct color for "Ready for Pickup"
+                        statusCircle.setFill(Color.BLUE);  // Color of the status circle to blue
+
+                        // Optional: visually update the order box to reflect this state
+                        orderBox.setStyle("-fx-background-color: #add8e6;"); // Light blue to indicate ready for pickup
+                    }
+                });
 //             System.out.println("Checking order " + order.getOrderId());
 //            System.out.println("Payment Status: " + order.getPaymentStatus());
 //            System.out.println("Order Status: " + order.getOrderStatus());

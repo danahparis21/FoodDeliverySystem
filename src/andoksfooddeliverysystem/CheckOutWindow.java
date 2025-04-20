@@ -61,6 +61,7 @@ public class CheckOutWindow {
     private static int addressId = -1;
     private static Address selectedAddress;
      private static double totalPrice;
+        private static double deliveryFee;
     //     private static double deliveryLabel;
 
      static double subtotal;
@@ -84,10 +85,11 @@ public class CheckOutWindow {
         System.out.println("✅ Checkout opened for User ID: " + userId + ", Customer ID: " + customerId);
         subtotal = 0.0;
         totalPrice = 0.0;
+        deliveryFee = 0.0;
         //deliveryLabel = 0.0;
-        deliveryLabel = new Label("Delivery Fee: ₱49");
+        deliveryLabel = new Label("Delivery Fee: ₱" + String.format("%.2f", deliveryFee));
         subtotalLabel = new Label("Subtotal: ₱" + String.format("%.2f", subtotal));
-        totalLabel = new Label("Total: ₱" + String.format("%.2f", subtotal + 49)); // or whatever logic you have
+        totalLabel = new Label("Total: ₱" + String.format("%.2f", subtotal + deliveryFee)); // or whatever logic you have
 
 
         Stage checkoutStage = new Stage();
@@ -167,6 +169,15 @@ public class CheckOutWindow {
         barangayCombo.getItems().addAll(getBarangays()); // Get barangays from the database
         barangayCombo.getSelectionModel().selectFirst();
         barangayCombo.setPromptText("Barangay");
+        barangayCombo.setOnAction(event -> {
+        String selectedBarangay = barangayCombo.getValue();
+         deliveryFee = getDeliveryFeeByBarangay(selectedBarangay);
+
+        deliveryLabel.setText("Delivery Fee: ₱" + String.format("%.2f", deliveryFee));
+        double newTotal = subtotal + deliveryFee;
+        totalLabel.setText("Total: ₱" + String.format("%.2f", newTotal));
+        totalPrice = newTotal; // Update global total
+    });
         
         TextField streetField = new TextField();
         streetField.setPromptText("Street Address");
@@ -491,10 +502,15 @@ public class CheckOutWindow {
 
      
         // Setup default values based on delivery type
+       
         boolean isDelivery = deliveryTypeCombo.getValue().equals("Delivery");
-        double deliveryFee = isDelivery ? 49.0 : 0.0;
-     
-subtotalLabel.setText("Subtotal: ₱" + String.format("%.2f", subtotal));
+        if (isDelivery) {
+            deliveryFee = getDeliveryFeeByBarangay(barangayCombo.getValue());
+        } else {
+            deliveryFee = 0.0;
+        }
+
+        subtotalLabel.setText("Subtotal: ₱" + String.format("%.2f", subtotal));
 
         deliveryLabel.setText("Delivery Fee: ₱" + String.format("%.2f", deliveryFee));
         totalLabel.setText("Total: ₱" + String.format("%.2f", subtotal + deliveryFee));
@@ -513,12 +529,22 @@ subtotalLabel.setText("Subtotal: ₱" + String.format("%.2f", subtotal));
                 return;
             }
             
-            // If it's pickup, but no time slots are available
-            if (deliveryTypeCombo.getValue().equals("For Pick Up") && pickupTimeCombo.getValue().equals("No available time slots") &&  pickupTimeCombo.getValue().equals("Select Pickup Time")) {
-                showAlert("Error", "Pick-Up Unavailable, please use Delivery");
-                totalPrice = subtotal + 49.00;  // Adding delivery feedanah
+         if (deliveryTypeCombo.getValue().equals("For Pick Up")) {
+            String selectedTime = pickupTimeCombo.getValue();
+
+            if (selectedTime == null || selectedTime.equals("Select Pickup Time") || selectedTime.equals("No available time slots")) {
+                showAlert("Missing Pickup Time", "Please pick a pickup time first.");
                 return;
             }
+        }
+         
+         ProgressIndicator loadingIndicator = new ProgressIndicator();
+        loadingIndicator.setVisible(false); // Hide by default
+
+        VBox loadingOverlay = new VBox(loadingIndicator);
+        loadingOverlay.setStyle("-fx-background-color: rgba(0,0,0,0.5);");
+        loadingOverlay.setAlignment(Pos.CENTER);
+        loadingOverlay.setVisible(false);
 
              
             String paymentMethod = paymentMethodComboBox.getSelectionModel().getSelectedItem() != null 
@@ -675,6 +701,10 @@ subtotalLabel.setText("Subtotal: ₱" + String.format("%.2f", subtotal));
 
         orderSummary.getChildren().addAll(subtotalLabel, deliveryLabel, totalLabel, placeOrderBtn, closeBtn);
 
+        
+        
+        
+
        // Step 5: Combine all into Main Layout (VBox)
         VBox mainLayout = new VBox(15);
         mainLayout.setPadding(new Insets(20));
@@ -689,7 +719,7 @@ subtotalLabel.setText("Subtotal: ₱" + String.format("%.2f", subtotal));
         leftLayout.getChildren().addAll( addressSection,orderSummary);
 
 
-        mainLayout.getChildren().addAll(progressSection, title, leftLayout,paymentMethodLabel,paymentMethodComboBox, cardSelectionContainer);
+        mainLayout.getChildren().addAll( progressSection, title, leftLayout,paymentMethodLabel,paymentMethodComboBox, cardSelectionContainer);
 
         Scene scene = new Scene(mainLayout, 1200, 700);
         checkoutStage.setScene(scene);
@@ -835,6 +865,7 @@ subtotalLabel.setText("Subtotal: ₱" + String.format("%.2f", subtotal));
     }
 
 
+    
 public static int saveOrderToDatabase(int customerId, int addressId, double totalPrice, String paymentMethod, String orderType, String pickupTime, int userId) {
     try (Connection conn = Database.connect()) {
 
@@ -994,6 +1025,25 @@ try (PreparedStatement itemsStmt = conn.prepareStatement(itemsQuery)) {
     return -1;
 }
 
+private static double getDeliveryFeeByBarangay(String barangayName) {
+    double fee = 0.0;
+    String query = "SELECT delivery_fee FROM barangay WHERE barangay_name = ?";
+    
+    try (Connection conn = Database.connect();
+         PreparedStatement stmt = conn.prepareStatement(query)) {
+        
+        stmt.setString(1, barangayName);
+        ResultSet rs = stmt.executeQuery();
+        
+        if (rs.next()) {
+            fee = rs.getDouble("delivery_fee");
+        }
+        
+    } catch (SQLException e) {
+        e.printStackTrace(); // Handle errors properly
+    }
+    return fee;
+}
 
 
 
@@ -1048,7 +1098,8 @@ try (PreparedStatement itemsStmt = conn.prepareStatement(itemsQuery)) {
     private static List<String> getBarangays() {
         List<String> barangays = new ArrayList<>();
         try (Connection conn = Database.connect()) {
-            String sql = "SELECT barangay_name FROM Barangay"; // Assuming barangays table
+           String sql = "SELECT barangay_name FROM Barangay WHERE barangay_id != 36";
+ // Assuming barangays table
             PreparedStatement pstmt = conn.prepareStatement(sql);
             ResultSet rs = pstmt.executeQuery();
 

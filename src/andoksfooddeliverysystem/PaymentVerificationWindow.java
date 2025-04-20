@@ -14,6 +14,7 @@ import java.sql.SQLException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.*;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.scene.paint.Color;
@@ -50,50 +51,61 @@ public class PaymentVerificationWindow {
     HBox buttonBox = new HBox(10, approveBtn, declineBtn);
     layout.getChildren().add(buttonBox);
 
-    approveBtn.setOnAction(ae -> {
-        updatePaymentStatus(order.getOrderId(), "Paid");
-        
-        order.setPaymentStatus("Paid");
-        paymentStatusLabel.setText("Payment Status: Paid");
-        // Disable all related buttons
-        verifyPaymentButton.setDisable(true);
-       
-        verificationStage.close();
+   approveBtn.setOnAction(ae -> {
+        Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmAlert.setTitle("Confirm Approval");
+        confirmAlert.setHeaderText("Are you sure you want to approve this payment?");
+        confirmAlert.setContentText("This will mark the order as Paid.");
+
+        Optional<ButtonType> result = confirmAlert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            updatePaymentStatus(order.getOrderId(), "Paid");
+            order.setPaymentStatus("Paid");
+            paymentStatusLabel.setText("Payment Status: Paid");
+            verifyPaymentButton.setDisable(true);
+            verificationStage.close();
+        }
     });
 
+
     declineBtn.setOnAction(de -> {
-        
-        updatePaymentStatus(order.getOrderId(), "Payment Declined");
+        Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmAlert.setTitle("Confirm Decline");
+        confirmAlert.setHeaderText("Are you sure you want to decline this payment?");
+        confirmAlert.setContentText("This will cancel the order and mark the payment as Declined.");
+
+        Optional<ButtonType> result = confirmAlert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            updatePaymentStatus(order.getOrderId(), "Payment Declined");
             try {
                 updateOrderStatus(order.getOrderId(), "Cancelled", adminId);
             } catch (MessagingException ex) {
                 Logger.getLogger(PaymentVerificationWindow.class.getName()).log(Level.SEVERE, null, ex);
             }
-         
 
-        order.setPaymentStatus("Payment Declined");
-        
-        paymentStatusLabel.setText("Payment Status: Cancelled - Invalid Proof of Payment");
-      
-        order.setOrderStatus("Cancelled"); // Add this line to reflect new status in the object itself
-
-        // Disable all related buttons
-        verifyPaymentButton.setDisable(true);
-        assignToRiderButton.setDisable(true);
-        orderPickedUpButton.setDisable(true);
+            order.setPaymentStatus("Payment Declined");
+            paymentStatusLabel.setText("Payment Status: Cancelled - Invalid Proof of Payment");
+            order.setOrderStatus("Cancelled");
+            
+             // Disable all related buttons
+            verifyPaymentButton.setDisable(true);
+            assignToRiderButton.setDisable(true);
+            orderPickedUpButton.setDisable(true);
 
 
-        // Update status label & circle
-        statusLabel.setText("Cancelled");
-        statusLabel.setTextFill(Color.GRAY);
-        statusCircle.setFill(Color.GRAY);
+            // Update status label & circle
+            statusLabel.setText("Cancelled");
+            statusLabel.setTextFill(Color.GRAY);
+            statusCircle.setFill(Color.GRAY);
 
-        // Gray the box and move to bottom
-        orderBox.setStyle("-fx-background-color: #d3d3d3;");
-        ordersContainer.getChildren().remove(orderBox);
-        ordersContainer.getChildren().add(orderBox);
+            // Gray the box and move to bottom
+            orderBox.setStyle("-fx-background-color: #d3d3d3;");
+            ordersContainer.getChildren().remove(orderBox);
+            ordersContainer.getChildren().add(orderBox);
 
-        verificationStage.close();
+            verificationStage.close();
+        }
+       
     });
 
 

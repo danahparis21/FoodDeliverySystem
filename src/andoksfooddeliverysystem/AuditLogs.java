@@ -190,7 +190,7 @@ public class AuditLogs {
         }
 
         // If role filter is applied, check if entry's role matches
-        if (role != null && !role.equals("all")) {
+        if (role != null && !role.equals("All")) {
             return matchesSearch && (entry.getUserRole() != null && entry.getUserRole().equalsIgnoreCase(role));
         }
 
