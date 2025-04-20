@@ -724,104 +724,226 @@ private void showRiderManagement() {
     deleteButton.setStyle("-fx-background-color: transparent; -fx-text-fill: " + primaryRed + "; -fx-font-weight: bold; -fx-border-color: " + primaryRed + "; -fx-border-radius: 4px;");
     
     
-    actionButtons.getChildren().addAll(saveButton, deleteButton);
+    actionButtons.getChildren().addAll(saveButton);
     
-    // Set up save action
-    saveButton.setOnAction(e -> {
-        String selectedCategory = categoryComboBox.getValue();
-        if (selectedCategory == null) {
-            showAlert(Alert.AlertType.WARNING, "Missing Information", "Please select a category!");
-            return;
-        }
+      saveButton.setOnAction(e -> {
+            
+            String selectedCategory = categoryComboBox.getValue();
+            if (selectedCategory == null) {
+                System.out.println("Please select a category!");
+                return; // Prevent saving without category
+            }
 
-        if (nameField.getText().isEmpty() || priceField.getText().isEmpty()) {
-            showAlert(Alert.AlertType.WARNING, "Missing Information", "Name and price are required fields.");
-            return;
-        }
-
-        try {
             String itemName = nameField.getText();
             double price = Double.parseDouble(priceField.getText());
-            String availability = availabilityCombo.getValue();
+            String availability = availabilityCombo.getValue(); // changed
             String description = descriptionField.getText();
 
             // Get category_id from category_name
-            int categoryId = getCategoryId(selectedCategory);
+            int categoryId = getCategoryId(selectedCategory); // Call method to fetch category_id
             if (categoryId == -1) {
-                showAlert(Alert.AlertType.ERROR, "Error", "Category not found!");
+                System.out.println("Category not found!");
                 return;
             }
-            
-            // Handle image and database operations (keep the original logic)
-            // Handle Image
-            String imagePath = null;
-            if (imageView.getImage() != null) {
-                try {
-                    File destFolder = new File("src/menu");
-                    if (!destFolder.exists()) {
-                        destFolder.mkdirs();
-                    }
-
-                    File file = new File(Paths.get(URI.create(imageView.getImage().getUrl())).toFile().getAbsolutePath());
-                    File destFile = new File(destFolder, file.getName());
-
-                    if (file.exists()) {
-                        Files.copy(file.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                        imagePath = "src/menu/" + file.getName();
-                    } else {
-                        System.out.println("❌ Image file not found: " + file.getAbsolutePath());
-                    }
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
-
-            // Database operations remain the same
-            try (Connection conn = Database.connect()) {
-                // Check if the item exists based on ID
-                String checkSql = "SELECT item_id FROM menu_items WHERE name = ?";
-                PreparedStatement checkStmt = conn.prepareStatement(checkSql);
-                checkStmt.setString(1, itemName);
-                ResultSet rs = checkStmt.executeQuery();
-
-                if (rs.next()) {
-                    int existingId = rs.getInt("item_id");
-
-                    Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-                    alert.setTitle("Item Exists");
-                    alert.setHeaderText("This item already exists.");
-                    alert.setContentText("Do you want to update the existing item or insert a new one?");
-
-                    ButtonType updateButton = new ButtonType("Update");
-                    ButtonType insertNewButton = new ButtonType("Insert New");
-                    ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
-
-                    alert.getButtonTypes().setAll(updateButton, insertNewButton, cancelButton);
-                    Optional<ButtonType> result = alert.showAndWait();
-
-                    if (result.isPresent()) {
-                        if (result.get() == updateButton) {
-                            // Update existing menu item logic
-                            // (Keep the original code)
-                        } 
-                        else if (result.get() == insertNewButton) {
-                            // Insert new item logic
-                            // (Keep the original code)
-                        }
-                    }
-                } else {
-                    // Insert new record logic
-                    // (Keep the original code)
-                }
-            } catch (SQLException ex) {
-                ex.printStackTrace();
-                showAlert(Alert.AlertType.ERROR, "Database Error", "Error saving menu item: " + ex.getMessage());
-            }
-        } catch (NumberFormatException ex) {
-            showAlert(Alert.AlertType.ERROR, "Invalid Input", "Please enter a valid price.");
+    // Handle Image
+String imagePath = null;
+if (imageView.getImage() != null) {
+    try {
+        File destFolder = new File("src/menu");
+        if (!destFolder.exists()) {
+            destFolder.mkdirs(); // Create menu folder if it doesn't exist
         }
-    });
-  
+
+        // Get the file path safely
+        File file = new File(Paths.get(URI.create(imageView.getImage().getUrl())).toFile().getAbsolutePath());
+
+        // Destination file
+        File destFile = new File(destFolder, file.getName());
+
+        // Copy image if it exists
+        if (file.exists()) {
+            Files.copy(file.toPath(), destFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            imagePath = "src/menu/" + file.getName(); // Save relative path
+        } else {
+            System.out.println("❌ Image file not found: " + file.getAbsolutePath());
+        }
+
+    } catch (Exception ex) {
+        ex.printStackTrace();
+    }
+}
+
+
+        // Save to Database
+        try (Connection conn = Database.connect()) {
+            // Check if the item exists based on ID
+            String checkSql = "SELECT item_id FROM menu_items WHERE name = ?";
+            PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+            checkStmt.setString(1, itemName);
+            ResultSet rs = checkStmt.executeQuery();
+
+            if (rs.next()) {  // If an existing item is found
+                int existingId = rs.getInt("item_id");  // Get the item's ID
+
+                // Show confirmation alert
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Item Exists");
+                alert.setHeaderText("This item already exists.");
+                alert.setContentText("Do you want to update the existing item or insert a new one?");
+
+                ButtonType updateButton = new ButtonType("Update");
+                ButtonType insertNewButton = new ButtonType("Insert New");
+                ButtonType cancelButton = new ButtonType("Cancel", ButtonBar.ButtonData.CANCEL_CLOSE);
+
+                alert.getButtonTypes().setAll(updateButton, insertNewButton, cancelButton);
+                Optional<ButtonType> result = alert.showAndWait();
+
+                if (result.isPresent()) {
+                    if (result.get() == updateButton) {
+    // Update existing menu item
+            String updateSql = "UPDATE menu_items SET price = ?, availability = ?, category_id = ?, description = ?, image_path = ?, last_modified_by = ? WHERE item_id = ?";
+            PreparedStatement updateStmt = conn.prepareStatement(updateSql);
+            updateStmt.setDouble(1, price);
+            updateStmt.setString(2, availability);
+            updateStmt.setInt(3, categoryId);
+            updateStmt.setString(4, description);
+            updateStmt.setString(5, imagePath);
+            updateStmt.setInt(6, userID);  
+            updateStmt.setInt(7, existingId);   
+   
+            updateStmt.executeUpdate();
+            System.out.println("Menu item updated!");
+
+            // ✅ 1. Delete old variations
+            String deleteVariationsSQL = "DELETE FROM menu_variations WHERE item_id = ?";
+            PreparedStatement deleteStmt = conn.prepareStatement(deleteVariationsSQL);
+            deleteStmt.setInt(1, existingId);
+            deleteStmt.executeUpdate();
+            System.out.println("Old variations deleted.");
+
+            // ✅ 2. Insert new variations
+            ObservableList<String> variations = variationList.getItems();
+            String insertVariationSQL = "INSERT INTO menu_variations (item_id, variation_name, variation_price, last_modified_by) VALUES (?, ?, ?, ?)";
+            PreparedStatement variationStmt = conn.prepareStatement(insertVariationSQL);
+
+            for (String variation : variations) {
+                int priceStart = variation.indexOf("₱"); 
+                if (priceStart != -1) {
+                    String variationName = variation.substring(0, priceStart).trim().replaceAll("\\($", "");
+
+                    String priceString = variation.substring(priceStart + 1, variation.length() - 1);
+
+                    variationStmt.setInt(1, existingId);
+                    variationStmt.setString(2, variationName);
+                    variationStmt.setBigDecimal(3, new BigDecimal(priceString));
+                     variationStmt.setInt(4, userID);  
+                    variationStmt.executeUpdate();
+                }
+            }
+            System.out.println("New variations updated!");
+        }
+           else if (result.get() == insertNewButton) {
+                        // Insert a new item (ensuring name uniqueness)
+                        String insertSql = "INSERT INTO menu_items (name, price, availability, category_id, description, image_path, last_modified_by) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                        PreparedStatement insertStmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS);
+
+                        insertStmt.setString(1, itemName + " (New)");
+                        insertStmt.setDouble(2, price);
+                        insertStmt.setString(3, availability);
+                        insertStmt.setInt(4, categoryId);
+                        insertStmt.setString(5, description);
+                        insertStmt.setString(6, imagePath);
+                        insertStmt.setInt(7, userID);
+
+                        insertStmt.executeUpdate();
+                        
+                         ResultSet resultset = insertStmt.getGeneratedKeys();
+                        int itemId = -1;
+                        if (resultset.next()) {
+                            itemId = resultset.getInt(1); // Get the generated item_id
+                        }
+                        
+                         ObservableList<String> variations = variationList.getItems(); // Get all variations
+
+                        String insertVariationSQL = "INSERT INTO menu_variations (item_id, variation_name, variation_price, last_modified_by) VALUES (?, ?, ?, ?)";
+                        PreparedStatement variationStmt = conn.prepareStatement(insertVariationSQL);
+
+                        for (String variation : variations) {
+                            // Extract variation name & price from format: "Cut (₱50.00)"
+                            int priceStart = variation.indexOf("₱"); 
+                            if (priceStart != -1) {
+                                String variationName = variation.substring(0, priceStart).trim().replaceAll("\\($", "");
+
+                                String priceString = variation.substring(priceStart + 1, variation.length() - 1); // Remove ₱ and )
+
+                                variationStmt.setInt(1, itemId); // Link variation to menu item
+                                variationStmt.setString(2, variationName); // Extracted variation name
+                                variationStmt.setBigDecimal(3, new BigDecimal(priceString)); // Convert price to BigDecimal
+                                variationStmt.setInt(4, userID);
+                                variationStmt.executeUpdate();
+                            }
+                        }
+                        System.out.println("Variations added successfully!");
+                        System.out.println("New menu item added!");
+                    }
+                }
+            } else {
+                // If item doesn't exist, insert a new record
+                String insertSql = "INSERT INTO menu_items (name, price, availability, category_id, description, image_path, last_modified_by) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                PreparedStatement insertStmt = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS); // ✅ FIXED
+
+                insertStmt.setString(1, itemName);
+                insertStmt.setDouble(2, price);
+                insertStmt.setString(3, availability);
+                insertStmt.setInt(4, categoryId);
+                insertStmt.setString(5, description);
+                insertStmt.setString(6, imagePath);
+                insertStmt.setInt(7, userID);
+
+                insertStmt.executeUpdate();
+                
+                ResultSet resultset = insertStmt.getGeneratedKeys();
+                int itemId = -1;
+                if (resultset.next()) {
+                    itemId = resultset.getInt(1); // Get the generated item_id
+                }
+                
+                ObservableList<String> variations = variationList.getItems(); // Get all variations
+
+                String insertVariationSQL = "INSERT INTO menu_variations (item_id, variation_name, variation_price, last_modified_by) VALUES (?, ?, ?,?)";
+                PreparedStatement variationStmt = conn.prepareStatement(insertVariationSQL);
+
+                for (String variation : variations) {
+                    // Extract variation name & price from format: "Cut (₱50.00)"
+                    int priceStart = variation.indexOf("₱"); 
+                    if (priceStart != -1) {
+                        String variationName = variation.substring(0, priceStart).trim().replaceAll("\\($", "");
+
+                        String priceString = variation.substring(priceStart + 1, variation.length() - 1); // Remove ₱ and )
+
+                        variationStmt.setInt(1, itemId); // Link variation to menu item
+                        variationStmt.setString(2, variationName); // Extracted variation name
+                        variationStmt.setBigDecimal(3, new BigDecimal(priceString)); // Convert price to BigDecimal
+                        variationStmt.setInt(4, userID); // Convert price to BigDecimal
+                        variationStmt.executeUpdate();
+                    }
+                }
+                System.out.println("Variations added successfully!");
+                // ✅ Show success alert
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Menu Item Saved");
+            alert.setHeaderText(null);
+            alert.setContentText("The menu item and its variations have been saved successfully!");
+            alert.showAndWait();
+
+                
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+        });
+      
+      
     
     // Add components to the form layout
     formPane.getChildren().addAll(
@@ -931,51 +1053,140 @@ private void showRiderManagement() {
     descriptionColumn.setPrefWidth(150);
     
     TableColumn<FoodItem, Void> actionsColumn = new TableColumn<>("Actions");
-    actionsColumn.setPrefWidth(100);
-    actionsColumn.setCellFactory(col -> new TableCell<FoodItem, Void>() {
-        private final Button editButton = new Button("Edit");
-        {
-            editButton.setStyle("-fx-background-color: " + secondaryYellow + "; -fx-text-fill: " + darkText + "; -fx-font-size: 11px;");
+actionsColumn.setPrefWidth(150); // Increased width to fit both buttons
+actionsColumn.setCellFactory(col -> new TableCell<FoodItem, Void>() {
+    private final Button editButton = new Button("Edit");
+    private final Button deleteButton = new Button("Delete");
+    private final HBox buttons = new HBox(5); // Container for both buttons
+    
+    {
+        // Style both buttons
+        editButton.setStyle("-fx-background-color: " + secondaryYellow + "; -fx-text-fill: " + darkText + "; -fx-font-size: 11px;");
+        deleteButton.setStyle("-fx-background-color: #ff4444; -fx-text-fill: white; -fx-font-size: 11px;");
+        
+        // Add buttons to container
+        buttons.getChildren().addAll(editButton, deleteButton);
+        
+        // Edit button action (your existing code)
+            editButton.setOnAction(event -> {
+                FoodItem foodItem = getTableView().getItems().get(getIndex());
+                // Populate form with this item's data
+                nameField.setText(foodItem.getName());
+                priceField.setText(String.valueOf(foodItem.getPrice()));
+                availabilityCombo.setValue(foodItem.getAvailability());
+                categoryComboBox.setValue(getCategoryName(foodItem.getCategoryId()));
+                descriptionField.setText(foodItem.getDescription());
+                fetchAndDisplayVariations(foodItem.getId());
+
+                // Load image
+                if (foodItem.getImagePath() != null && !foodItem.getImagePath().isEmpty()) {
+                    File file = new File(foodItem.getImagePath());
+                    if (file.exists()) {
+                        imageView.setImage(new Image(file.toURI().toString()));
+                    } else {
+                        imageView.setImage(null);
+                    }
+                } else {
+                    imageView.setImage(null);
+                }
+            });
+
+            // Delete button action (new code)
+           deleteButton.setOnAction(event -> {
+    FoodItem foodItem = getTableView().getItems().get(getIndex());
+    
+    System.out.println("=== Starting deletion for item ID: " + foodItem.getId() + " ===");
+    
+    Alert alert = new Alert(Alert.AlertType.CONFIRMATION, 
+        "Delete " + foodItem.getName() + "? This cannot be undone.", 
+        ButtonType.YES, ButtonType.NO);
+    
+    Optional<ButtonType> result = alert.showAndWait();
+    if (result.isPresent() && result.get() == ButtonType.YES) {
+        Connection conn = null;
+        try {
+            conn = Database.connect();
+            conn.setAutoCommit(false); // Start transaction
+            
+            // 1. Delete variations
+            System.out.println("Executing variations delete...");
+            String deleteVariationsSQL = "DELETE FROM menu_variations WHERE item_id = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(deleteVariationsSQL)) {
+                stmt.setInt(1, foodItem.getId());
+                int rows = stmt.executeUpdate();
+                System.out.println("Deleted " + rows + " variations");
+            }
+            
+            // 2. Delete main item
+            System.out.println("Executing item delete...");
+            String deleteItemSQL = "DELETE FROM menu_items WHERE item_id = ?";
+            try (PreparedStatement stmt = conn.prepareStatement(deleteItemSQL)) {
+                stmt.setInt(1, foodItem.getId());
+                int rows = stmt.executeUpdate();
+                System.out.println("Deleted " + rows + " menu items");
+                
+                if (rows == 0) {
+                    throw new SQLException("No rows affected - ID may not exist");
+                }
+            }
+            
+            conn.commit(); // Commit transaction
+            System.out.println("Transaction committed!");
+            
+           // Create a new modifiable list and update the TableView
+        ObservableList<FoodItem> currentItems = FXCollections.observableArrayList(getTableView().getItems());
+        currentItems.remove(foodItem);
+        getTableView().setItems(currentItems);
+            
+        } catch (SQLException ex) {
+            System.err.println("!!! DELETION FAILED !!!");
+            ex.printStackTrace();
+            
+            // Rollback if connection exists
+            if (conn != null) {
+                try {
+                    conn.rollback();
+                    System.out.println("Transaction rolled back");
+                } catch (SQLException e) {
+                    System.err.println("Rollback failed!");
+                    e.printStackTrace();
+                }
+            }
+            
+            // Show error to user
+            Alert error = new Alert(Alert.AlertType.ERROR);
+            error.setTitle("Deletion Error");
+            error.setHeaderText("Failed to delete " + foodItem.getName());
+            error.setContentText("Database error: " + ex.getMessage());
+            error.showAndWait();
+            
+        } finally {
+            if (conn != null) {
+                try {
+                    conn.close();
+                } catch (SQLException e) {
+                    System.err.println("Failed to close connection");
+                }
+            }
         }
-        
-        
-        
+    }
+});
+        }
+
+        @Override
         protected void updateItem(Void item, boolean empty) {
             super.updateItem(item, empty);
             if (empty) {
                 setGraphic(null);
             } else {
-                editButton.setOnAction(event -> {
-                    FoodItem foodItem = getTableView().getItems().get(getIndex());
-                    // Populate form with this item's data
-                    nameField.setText(foodItem.getName());
-                    priceField.setText(String.valueOf(foodItem.getPrice()));
-                    availabilityCombo.setValue(foodItem.getAvailability());
-                    categoryComboBox.setValue(getCategoryName(foodItem.getCategoryId()));
-                    descriptionField.setText(foodItem.getDescription());
-                    fetchAndDisplayVariations(foodItem.getId());
-                    
-                    // Load image
-                    if (foodItem.getImagePath() != null && !foodItem.getImagePath().isEmpty()) {
-                        File file = new File(foodItem.getImagePath());
-                        if (file.exists()) {
-                            imageView.setImage(new Image(file.toURI().toString()));
-                        } else {
-                            imageView.setImage(null);
-                        }
-                    } else {
-                        imageView.setImage(null);
-                    }
-                });
-                
-                setGraphic(editButton);
+                setGraphic(buttons);
             }
         }
     });
-    
+
+    // Add the columns to your TableView (your existing code)
     tableView.getColumns().addAll(nameColumn, priceColumn, availabilityColumn, categoryColumn, descriptionColumn, actionsColumn);
-    
-    ObservableList<FoodItem> menuItems = FXCollections.observableArrayList();
+        ObservableList<FoodItem> menuItems = FXCollections.observableArrayList();
     FilteredList<FoodItem> filteredData = new FilteredList<>(menuItems, p -> true);
     SortedList<FoodItem> sortedData = new SortedList<>(filteredData);
     sortedData.comparatorProperty().bind(tableView.comparatorProperty());
@@ -1002,52 +1213,52 @@ private void showRiderManagement() {
         ex.printStackTrace();
     }
     
-       deleteButton.setOnAction(event -> {
-         FoodItem selectedItem = tableView.getSelectionModel().getSelectedItem();
-         if (selectedItem == null) {
-             System.out.println("❌ No item selected for deletion.");
-             return;
-         }
+      deleteButton.setOnAction(event -> {
+    // Get the selected item based on the row the delete button was clicked on
+    FoodItem selectedItem = tableView.getSelectionModel().getSelectedItem();
+    if (selectedItem == null) {
+        System.out.println("Selected item: " + selectedItem);  // Debugging line
+        System.out.println("❌ No item selected for deletion.");
+        return;
+    }
 
     // Confirm before deleting
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to delete this item?", ButtonType.YES, ButtonType.NO);
-        alert.setTitle("Confirm Deletion");
-        Optional<ButtonType> result = alert.showAndWait();
+    Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to delete this item?", ButtonType.YES, ButtonType.NO);
+    alert.setTitle("Confirm Deletion");
+    Optional<ButtonType> result = alert.showAndWait();
 
-        if (result.isPresent() && result.get() == ButtonType.YES) {
-            try (Connection conn = Database.connect()) {
-                // Delete variations first
-                String deleteVariationsSQL = "DELETE FROM menu_variations WHERE item_id = (SELECT item_id FROM menu_items WHERE name = ?)";
-                PreparedStatement deleteVariationsStmt = conn.prepareStatement(deleteVariationsSQL);
-                deleteVariationsStmt.setString(1, selectedItem.getName());
-                deleteVariationsStmt.executeUpdate();
+    if (result.isPresent() && result.get() == ButtonType.YES) {
+        try (Connection conn = Database.connect()) {
+            // Delete variations first
+            String deleteVariationsSQL = "DELETE FROM menu_variations WHERE item_id = (SELECT item_id FROM menu_items WHERE name = ?)";
+            PreparedStatement deleteVariationsStmt = conn.prepareStatement(deleteVariationsSQL);
+            deleteVariationsStmt.setString(1, selectedItem.getName());
+            deleteVariationsStmt.executeUpdate();
 
-                // Delete the menu item itself
-                String deleteItemSQL = "DELETE FROM menu_items WHERE name = ?";
-                PreparedStatement deleteItemStmt = conn.prepareStatement(deleteItemSQL);
-                deleteItemStmt.setString(1, selectedItem.getName());
-                deleteItemStmt.executeUpdate();
+            // Delete the menu item itself
+            String deleteItemSQL = "DELETE FROM menu_items WHERE name = ?";
+            PreparedStatement deleteItemStmt = conn.prepareStatement(deleteItemSQL);
+            deleteItemStmt.setString(1, selectedItem.getName());
+            deleteItemStmt.executeUpdate();
 
-                // Remove image file (optional)
-                if (selectedItem.getImagePath() != null) {
-                    File imageFile = new File(selectedItem.getImagePath());
-                    if (imageFile.exists()) {
-                        imageFile.delete();
-                        System.out.println("🗑️ Image deleted: " + selectedItem.getImagePath());
-                    }
+            // Remove image file (optional)
+            if (selectedItem.getImagePath() != null) {
+                File imageFile = new File(selectedItem.getImagePath());
+                if (imageFile.exists()) {
+                    imageFile.delete();
+                    System.out.println("🗑️ Image deleted: " + selectedItem.getImagePath());
                 }
-
-                // Remove item from the table
-                menuItems.remove(selectedItem);
-                System.out.println("✅ Menu item and its variations deleted successfully!");
-
-            } catch (SQLException ex) {
-                ex.printStackTrace();
             }
+
+            // Remove item from the table
+            menuItems.remove(selectedItem);
+            System.out.println("✅ Menu item and its variations deleted successfully!");
+
+        } catch (SQLException ex) {
+            ex.printStackTrace();
         }
-
-    });
-
+    }
+});
 
     
     // Apply filters
