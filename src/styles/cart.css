@@ -1,0 +1,211 @@
+/* cart.css - Stylesheet for ShowCart UI */
+
+/* General Styles */
+.root {
+    -fx-font-family: 'Segoe UI', Arial, sans-serif;
+    -fx-background-color: #FFFFFF;
+}
+
+/* Color variables */
+* {
+    -primary-red: #FF3B30;
+    -accent-yellow: #FFCC00;
+    -background-white: #FFFFFF;
+    -light-gray: #F2F2F7;
+    -text-black: #1C1C1E;
+    -success-green: #34C759;
+    -hover-red: #E02D24;
+    -hover-yellow: #FFD633;
+    -hover-gray: #E5E5EA;
+}
+
+/* Scroll Pane Styling */
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+    -fx-border-width: 0;
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane .scroll-bar:vertical {
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-padding: 0 0 0 5;
+}
+
+.scroll-pane .scroll-bar:vertical .thumb {
+    -fx-background-color: -light-gray;
+    -fx-background-radius: 5;
+}
+
+.scroll-pane .scroll-bar:vertical .thumb:hover {
+    -fx-background-color: #D1D1D6;
+}
+
+.scroll-pane .scroll-bar .increment-button,
+.scroll-pane .scroll-bar .decrement-button {
+    -fx-padding: 0;
+    -fx-background-color: transparent;
+}
+
+/* Button Styling */
+.button {
+    -fx-cursor: hand;
+    -fx-background-radius: 8;
+    -fx-transition: all 0.2s ease;
+}
+
+/* Primary Button (Red) */
+.button.primary {
+    -fx-background-color: -primary-red;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 15px;
+}
+
+.button.primary:hover {
+    -fx-background-color: -hover-red;
+    -fx-effect: dropshadow(gaussian, rgba(255,59,48,0.3), 5, 0, 0, 1);
+}
+
+.button.primary:pressed {
+    -fx-background-color: derive(-primary-red, -10%);
+    -fx-translate-y: 1px;
+}
+
+/* Secondary Button (Light Gray) */
+.button.secondary {
+    -fx-background-color: -light-gray;
+    -fx-text-fill: -text-black;
+    -fx-font-size: 15px;
+}
+
+.button.secondary:hover {
+    -fx-background-color: -hover-gray;
+}
+
+.button.secondary:pressed {
+    -fx-background-color: derive(-light-gray, -5%);
+    -fx-translate-y: 1px;
+}
+
+/* Link Style Button */
+.button.link {
+    -fx-background-color: transparent;
+    -fx-text-fill: -accent-yellow;
+    -fx-font-size: 13px;
+    -fx-underline: true;
+    -fx-padding: 2 4 2 4;
+}
+
+.button.link:hover {
+    -fx-text-fill: -hover-yellow;
+}
+
+/* Item Card Styling */
+.item-card {
+    -fx-background-color: -background-white;
+    -fx-border-color: -light-gray;
+    -fx-border-radius: 8;
+    -fx-padding: 15;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 3, 0, 0, 1);
+    -fx-transition: all 0.3s ease;
+}
+
+.item-card:hover {
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);
+    -fx-border-color: -accent-yellow;
+}
+
+/* Labels */
+.label-title {
+    -fx-font-size: 24px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -text-black;
+}
+
+.label-price {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -primary-red;
+}
+
+.label-total {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -primary-red;
+}
+
+/* Progress Bar */
+.progress-bar-container {
+    -fx-padding: 20 10 10 10;
+}
+
+/* Spinner Control */
+.spinner {
+    -fx-background-color: -background-white;
+    -fx-border-color: -light-gray;
+    -fx-border-radius: 4;
+}
+
+.spinner .increment-arrow-button,
+.spinner .decrement-arrow-button {
+    -fx-background-color: -light-gray;
+    -fx-background-radius: 0;
+}
+
+.spinner .increment-arrow-button:hover,
+.spinner .decrement-arrow-button:hover {
+    -fx-background-color: -hover-gray;
+}
+
+.spinner .increment-arrow,
+.spinner .decrement-arrow {
+    -fx-background-color: -text-black;
+}
+
+/* Summary Box */
+.summary-box {
+    -fx-background-color: -background-white;
+    -fx-border-color: -light-gray;
+    -fx-border-radius: 12;
+    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 8, 0, 0, 2);
+    -fx-padding: 20;
+}
+
+/* Details Box */
+.details-box {
+    -fx-background-color: -light-gray;
+    -fx-background-radius: 6;
+    -fx-padding: 10;
+}
+
+/* Separator */
+.separator {
+    -fx-background-color: -light-gray;
+}
+
+/* Empty Cart State */
+.empty-cart-box {
+    -fx-alignment: center;
+    -fx-padding: 40;
+}
+
+.empty-cart-icon {
+    -fx-font-size: 60px;
+    -fx-text-fill: -light-gray;
+}
+
+.empty-cart-label {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -text-black;
+}
+
+.empty-cart-sublabel {
+    -fx-font-size: 14px;
+    -fx-text-fill: gray;
+}

@@ -24,6 +24,21 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.TextAlignment;
 import java.sql.Types;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import javafx.animation.FadeTransition;
+import javafx.animation.ScaleTransition;
+import javafx.scene.Cursor;
+import javafx.scene.Node;
+import javafx.scene.effect.DropShadow;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.ImagePattern;
+import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
+import javafx.stage.Popup;
+import javafx.stage.PopupWindow;
+import javafx.stage.Window;
+import javafx.util.Duration;
 import org.kordamp.ikonli.javafx.FontIcon;
 
 public class CustomerDashboard extends Application {
@@ -32,58 +47,875 @@ public class CustomerDashboard extends Application {
     private VBox sideBar;
     private GridPane menuGrid;
     private Label cartCountLabel;
-     private Stage primaryStage;
+    private Stage primaryStage;
+    
+    // Andok's color scheme
+    private final String ANDOKS_RED = "#D61A0C";
+    private final String ANDOKS_YELLOW = "#FFD700";
+    private final String ANDOKS_WHITE = "#FFFFFF";
+    private final String ANDOKS_DARK_RED = "#B01508";
+    private final String ANDOKS_LIGHT_YELLOW = "#FFF0B3";
+    private int currentCategoryId = 2; // default or initial
+    private TextField searchField = new TextField();
+    
     // Constructor to receive userID
     public CustomerDashboard(int userID) {
         this.userID = userID;
-        System.out.println("✅ CustomerDashboard opened with User ID: " + userID); // Debugging
+        System.out.println("✅ CustomerDashboard opened with User ID: " + userID);
     }
     
     @Override
     public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
+        
         // Check if the store is open
         if (!isStoreOpen()) {
             showStoreClosedWindow();
             return;  // Skip the rest of the dashboard setup if store is closed
         }
-
+        
         mainLayout = new BorderPane();
         
-          // Fetch and display customer details based on userID
+        // Fetch and display customer details based on userID
         fetchCustomerData(userID);
         CartSession.setCartListener(count -> updateCartCount(count));
         updateCartCount(CartSession.getCartItemCount()); // Initial count
-
-
-        // 🔝 Top Bar (Search, Notifications, Profile)
+        
+        // 🔝 Top Bar with Andok's branding
         HBox topBar = createTopBar();
         mainLayout.setTop(topBar);
+        
+        // 📂 Side Category Tabs (Vertical) with images
+        sideBar = new VBox(15);
+        sideBar.setPadding(new Insets(20));
+        sideBar.setStyle("-fx-background-color: #F8F8F8; -fx-border-color: #E0E0E0; -fx-border-width: 0 1 0 0;");
+        sideBar.setPrefWidth(220);
+        
+        // Add header for categories
+        Label categoriesHeader = new Label("CATEGORIES");
+        categoriesHeader.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: " + ANDOKS_RED + "; -fx-padding: 0 0 10 0;");
+        sideBar.getChildren().add(categoriesHeader);
+        
+        loadCategories(); // ✅ Load categories from database with images
+        
+        mainLayout.setLeft(sideBar);
+        
+        // Create container for main content area
+        VBox contentContainer = new VBox(15);
+        contentContainer.setPadding(new Insets(20));
+        contentContainer.setStyle("-fx-background-color: " + ANDOKS_WHITE + ";");
+        
+        // Add a welcome header
+        HBox welcomeHeader = new HBox(10);
+        welcomeHeader.setAlignment(Pos.CENTER_LEFT);
+        Label welcomeLabel = new Label("Welcome to Andok's Menu");
+        welcomeLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: " + ANDOKS_RED + ";");
+        welcomeHeader.getChildren().add(welcomeLabel);
+       
 
-        // 📂 Side Category Tabs (Vertical)
-        sideBar = new VBox(10);
-        sideBar.setPadding(new Insets(10));
-        sideBar.setStyle("-fx-background-color: #f4f4f4;");
-         loadCategories(); // ✅ Load categories from database
-         mainLayout.setLeft(sideBar);
-
-        // 📦 Menu Grid
+        // 📦 Menu Grid with enhanced styling
         menuGrid = new GridPane();
-        menuGrid.setPadding(new Insets(20));
-        menuGrid.setHgap(15);
-        menuGrid.setVgap(15);
-        loadCategoryItems(2);
+        menuGrid.setPadding(new Insets(10));
+        menuGrid.setHgap(25);
+        menuGrid.setVgap(25);
+        loadCategoryItems(currentCategoryId, ""); // empty search
 
-        ScrollPane scrollPane = new ScrollPane(menuGrid);
+        
+        contentContainer.getChildren().addAll(welcomeHeader, menuGrid);
+        
+        ScrollPane scrollPane = new ScrollPane(contentContainer);
         scrollPane.setFitToWidth(true);
+        scrollPane.setStyle("-fx-background: " + ANDOKS_WHITE + "; -fx-background-color: " + ANDOKS_WHITE + ";");
+        
         mainLayout.setCenter(scrollPane);
-
+        
         // 🎭 Scene Setup
         Scene scene = new Scene(mainLayout, 1450, 700);
+        
+        // Add CSS for global styling
+        scene.getStylesheets().add(getClass().getResource("/styles/customerDashboard.css").toExternalForm());
+        
         primaryStage.setScene(scene);
-        primaryStage.setTitle("Customer Dashboard");
+        primaryStage.setTitle("Andok's - Customer Dashboard");
         primaryStage.show();
     }
+    
+    private HBox createTopBar() {
+        HBox topBar = new HBox();
+        topBar.setAlignment(Pos.CENTER_LEFT);
+        topBar.setPadding(new Insets(10, 20, 10, 20));
+        topBar.setSpacing(15);
+        topBar.setStyle("-fx-background-color: " + ANDOKS_RED + ";");
+        
+        // Logo
+     ImageView logo = new ImageView(
+        new Image(Main.class.getResourceAsStream("/icons/andoksLogo.png"))
+    );
+
+        
+        logo.setFitHeight(40);
+        logo.setPreserveRatio(true);
+        
+        // Restaurant Name
+        Label restaurantName = new Label("ANDOK'S");
+        restaurantName.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: " + ANDOKS_YELLOW + ";");
+        
+        // Search Box with enhanced styling
+        HBox searchBox = new HBox();
+        searchBox.setAlignment(Pos.CENTER);
+        searchBox.setStyle("-fx-background-color: rgba(255,255,255,0.2); -fx-background-radius: 20px; -fx-padding: 2px 10px;");
+        
+      
+        searchField.setPromptText("Search menu items...");
+        searchField.setPrefWidth(300);
+        searchField.setStyle("-fx-background-color: transparent; -fx-text-fill: white; -fx-prompt-text-fill: rgba(255,255,255,0.7);");
+        
+        searchField.textProperty().addListener((observable, oldValue, newValue) -> {
+            loadCategoryItems(currentCategoryId, newValue);
+        });
+
+        FontIcon searchIcon = new FontIcon("fas-search");
+        searchIcon.setIconColor(Color.WHITE);
+        
+        searchBox.getChildren().addAll(searchIcon, searchField);
+        
+        // Spacer
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        
+        // Notification Button with counter
+        Button notifBtn = new Button();
+        notifBtn.setGraphic(new FontIcon("fas-bell"));  // Using FontAwesome icon
+        notifBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: " + ANDOKS_WHITE + "; -fx-padding: 5px;");
+        notifBtn.setCursor(Cursor.HAND);
+        notifBtn.setOnAction(e -> showNotification());
+
+        // Notification count badge
+        Label notifCountLabel = new Label();
+        notifCountLabel.setStyle(
+            "-fx-background-color: " + ANDOKS_YELLOW + ";" +
+            "-fx-text-fill: " + ANDOKS_RED + ";" +
+            "-fx-font-size: 10px;" +
+            "-fx-padding: 1px 4px;" +
+            "-fx-background-radius: 10;" +
+            "-fx-min-width: 16px;" +
+            "-fx-alignment: center;" +
+            "-fx-font-weight: bold;"
+        );
+        notifCountLabel.setVisible(false); // Hide if no unread notifications
+
+        // Update notification count
+        int customerId = getCustomerIdFromUserId(userID);
+        int unreadCount = getUnreadNotificationCount(customerId);
+
+        if (unreadCount > 0) {
+            notifCountLabel.setText(String.valueOf(unreadCount));
+            notifCountLabel.setVisible(true);  // Show if there's a count > 0
+        } else {
+            notifCountLabel.setVisible(false); // Hide if no unread notifications
+        }
+
+        // Stack notification button and badge
+        StackPane notifButtonPane = new StackPane();
+        notifButtonPane.getChildren().addAll(notifBtn, notifCountLabel);
+        StackPane.setAlignment(notifCountLabel, Pos.TOP_RIGHT);
+        StackPane.setMargin(notifCountLabel, new Insets(-2, -2, 0, 0));  // Position adjustment
+        
+        // Cart Button with counter
+        Button cartBtn = new Button();
+        cartBtn.setGraphic(new FontIcon("fas-shopping-cart"));  // Using FontAwesome icon
+        cartBtn.setStyle("-fx-background-color: transparent; -fx-text-fill: " + ANDOKS_WHITE + "; -fx-padding: 5px;");
+        cartBtn.setCursor(Cursor.HAND);
+        cartBtn.setOnAction(e -> showCart());
+
+        // Cart count indicator
+        cartCountLabel = new Label("0");
+        cartCountLabel.setStyle(
+            "-fx-background-color: " + ANDOKS_YELLOW + ";" +
+            "-fx-text-fill: " + ANDOKS_RED + ";" +
+            "-fx-font-size: 10px;" +
+            "-fx-padding: 1px 4px;" +
+            "-fx-background-radius: 10;" +
+            "-fx-min-width: 16px;" +
+            "-fx-alignment: center;" +
+            "-fx-font-weight: bold;"
+        );
+        
+        // Position the cart count indicator
+        StackPane cartButtonPane = new StackPane();
+        cartButtonPane.getChildren().addAll(cartBtn, cartCountLabel);
+        StackPane.setAlignment(cartCountLabel, Pos.TOP_RIGHT);
+        StackPane.setMargin(cartCountLabel, new Insets(-2, -2, 0, 0));  // Position adjustment
+        
+        // Profile Button with more info
+        HBox profileBox = new HBox(10);
+        profileBox.setAlignment(Pos.CENTER);
+        profileBox.setPadding(new Insets(3, 8, 3, 8));
+        profileBox.setStyle("-fx-background-color: rgba(255,255,255,0.1); -fx-background-radius: 50px;");
+        
+        // Profile picture in a circle
+        Circle profilePic = new Circle(15);
+      profilePic.setFill(new ImagePattern(
+            new Image(Main.class.getResourceAsStream("/icons/default.png"))
+        ));
+
+        profilePic.setStroke(Color.valueOf(ANDOKS_YELLOW));
+        profilePic.setStrokeWidth(1.5);
+        
+        // Add username label
+        Label username = new Label("Guest");
+        username.setStyle("-fx-text-fill: " + ANDOKS_WHITE + "; -fx-font-size: 14px;");
+        
+        profileBox.getChildren().addAll(profilePic, username);
+        profileBox.setCursor(Cursor.HAND);
+        profileBox.setOnMouseClicked(e -> {
+            Customer customer = CustomerDAO.getCustomerByUserId(userID);
+            if (customer != null) {
+                CustomerProfile profile = new CustomerProfile();
+                profile.show(primaryStage, customer, userID);
+            } else {
+                System.out.println("⚠️ No customer found for user ID " + userID);
+            }
+        });
+        
+        // Hover effects for interactive elements
+        notifButtonPane.setOnMouseEntered(e -> 
+            notifBtn.setStyle("-fx-background-color: rgba(255,255,255,0.2); -fx-background-radius: 50%; -fx-padding: 5px;")
+        );
+        notifButtonPane.setOnMouseExited(e -> 
+            notifBtn.setStyle("-fx-background-color: transparent; -fx-padding: 5px;")
+        );
+        
+        cartButtonPane.setOnMouseEntered(e -> 
+            cartBtn.setStyle("-fx-background-color: rgba(255,255,255,0.2); -fx-background-radius: 50%; -fx-padding: 5px;")
+        );
+        cartButtonPane.setOnMouseExited(e -> 
+            cartBtn.setStyle("-fx-background-color: transparent; -fx-padding: 5px;")
+        );
+        
+        profileBox.setOnMouseEntered(e -> 
+            profileBox.setStyle("-fx-background-color: rgba(255,255,255,0.2); -fx-background-radius: 50px; -fx-padding: 3px 8px;")
+        );
+        profileBox.setOnMouseExited(e -> 
+            profileBox.setStyle("-fx-background-color: rgba(255,255,255,0.1); -fx-background-radius: 50px; -fx-padding: 3px 8px;")
+        );
+        
+        topBar.getChildren().addAll(logo, restaurantName, searchBox, spacer, notifButtonPane, cartButtonPane, profileBox);
+        return topBar;
+    }
+ 
+     private VBox createMenuItemBox(String itemName, String imagePath, double price) {
+        VBox itemBox = new VBox(10);
+        itemBox.setPadding(new Insets(15));
+        itemBox.setAlignment(Pos.CENTER);
+        itemBox.setStyle(
+            "-fx-background-color: #f8f8f8;" + 
+            "-fx-border-radius: 10px;" + 
+            "-fx-background-radius: 10px;" +
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 3, 0, 0, 0);"
+        );
+        itemBox.setPrefWidth(230);
+        itemBox.setPrefHeight(280);
+        
+        // Create an image container with a mask
+        StackPane imageContainer = new StackPane();
+        Rectangle imageClip = new Rectangle(150, 120);
+        imageClip.setArcWidth(20);
+        imageClip.setArcHeight(20);
+        
+        ImageView imageView = new ImageView(new Image("file:" + imagePath));
+        imageView.setFitWidth(150);
+        imageView.setFitHeight(120);
+        imageView.setClip(imageClip);
+        
+        // Add a subtle border
+        Rectangle imageBorder = new Rectangle(150, 120);
+        imageBorder.setArcWidth(20);
+        imageBorder.setArcHeight(20);
+        imageBorder.setFill(Color.TRANSPARENT);
+        imageBorder.setStroke(Color.valueOf("#E0E0E0"));
+        imageBorder.setStrokeWidth(1);
+        
+        imageContainer.getChildren().addAll(imageView, imageBorder);
+        
+        // Item name with enhanced styling
+        Label nameLabel = new Label(itemName);
+        nameLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: " + ANDOKS_RED + ";");
+        nameLabel.setWrapText(true);
+        nameLabel.setTextAlignment(TextAlignment.CENTER);
+        nameLabel.setMaxWidth(200);
+        
+
+        HBox priceBox = new HBox();
+        priceBox.setAlignment(Pos.CENTER);
+        
+        Label priceLabel = new Label("₱" + String.format("%.2f", price));
+        priceLabel.setStyle(
+            "-fx-font-size: 16px;" + 
+            "-fx-font-weight: bold;" + 
+            "-fx-background-color: " + ANDOKS_YELLOW + ";" +
+            "-fx-text-fill: " + ANDOKS_RED + ";" +
+            "-fx-padding: 3px 15px;" +
+            "-fx-background-radius: 15px;"
+        );
+        
+        priceBox.getChildren().add(priceLabel);
+  
+        // Item hover effects with more sophisticated animation
+        itemBox.setOnMouseEntered(e -> {
+            itemBox.setStyle(
+                "-fx-background-color: white;" + 
+                "-fx-border-radius: 10px;" + 
+                "-fx-background-radius: 10px;" +
+                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.25), 8, 0, 0, 0);"
+            );
+            
+            // Subtle scale effect
+            ScaleTransition scaleTransition = new ScaleTransition(Duration.millis(200), itemBox);
+            scaleTransition.setToX(1.03);
+            scaleTransition.setToY(1.03);
+            scaleTransition.play();
+            
+            // Add a subtle glow to the image
+            DropShadow glow = new DropShadow();
+            glow.setColor(Color.valueOf(ANDOKS_YELLOW));
+            glow.setRadius(20);
+            glow.setSpread(0.15);
+            imageView.setEffect(glow);
+        });
+        
+        itemBox.setOnMouseExited(e -> {
+            itemBox.setStyle(
+                "-fx-background-color: #f8f8f8;" + 
+                "-fx-border-radius: 10px;" + 
+                "-fx-background-radius: 10px;" +
+                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 3, 0, 0, 0);"
+            );
+            
+            // Return to original scale
+            ScaleTransition scaleTransition = new ScaleTransition(Duration.millis(200), itemBox);
+            scaleTransition.setToX(1.0);
+            scaleTransition.setToY(1.0);
+            scaleTransition.play();
+            
+            // Remove glow effect
+            imageView.setEffect(null);
+        });
+        
+        
+        itemBox.getChildren().addAll(imageContainer, nameLabel,  priceBox);
+           // ⏩ Open details window on click (you might need to pass the price here too)
+        itemBox.setOnMouseClicked(e -> MenuDetails.showItemDetails(itemName));
+
+      
+       
+        return itemBox;
+    }
+     
+    private void showNotification() {
+    // Keep the existing customer ID logic
+    int customerId = getCustomerIdFromUserId(userID);
+    System.out.println("Fetching notifications from " + customerId);
+    
+    if (customerId == -1) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Error");
+        alert.setHeaderText("Unable to fetch notifications");
+        alert.setContentText("No customer account found for this user.");
+        styleAlert(alert);
+        alert.showAndWait();
+        return;
+    }
+    
+    List<Notification> notifications = fetchNotifications(customerId);
+    
+    if (notifications.isEmpty()) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Notifications");
+        alert.setHeaderText("No New Notifications");
+        alert.setContentText("You don't have any new notifications at this time.");
+        styleAlert(alert);
+        alert.showAndWait();
+        return;
+    }
+    
+    // Constants for styling
+    final String PRIMARY_COLOR = "#FF5252"; // Red
+    final String SECONDARY_COLOR = "#FFD740"; // Yellow
+    final String BACKGROUND_COLOR = "#FFFFFF"; // White
+    final String LIGHT_GRAY = "#F5F5F5";
+    final String TEXT_COLOR = "#333333";
+    
+    // Create a dialog
+    Dialog<Void> dialog = new Dialog<>();
+    dialog.setTitle("🔔 Notifications");
+    
+    // Main container for notifications
+    VBox mainContainer = new VBox(10);
+    mainContainer.setPadding(new Insets(15));
+    mainContainer.setStyle("-fx-background-color: " + BACKGROUND_COLOR + ";");
+    
+    // Header section
+    Label headerLabel = new Label("Notifications");
+    headerLabel.setStyle(
+        "-fx-font-size: 18px;" +
+        "-fx-font-weight: bold;" +
+        "-fx-text-fill: " + TEXT_COLOR + ";"
+    );
+    
+    // Notification counter badge
+    Label countLabel = new Label(notifications.size() + " new");
+    countLabel.setStyle(
+        "-fx-background-color: " + PRIMARY_COLOR + ";" +
+        "-fx-text-fill: white;" +
+        "-fx-font-size: 12px;" +
+        "-fx-padding: 2 8;" +
+        "-fx-background-radius: 10px;"
+    );
+    
+    HBox headerBox = new HBox(10, headerLabel, countLabel);
+    headerBox.setAlignment(Pos.CENTER_LEFT);
+    
+    // Separator
+    Separator separator = new Separator();
+    
+    // Notifications list
+    VBox notificationList = new VBox(10);
+    
+    for (int i = 0; i < notifications.size(); i++) {
+        Notification notif = notifications.get(i);
+        
+        // Create notification card
+        HBox notificationCard = createNotificationCard(notif, i, PRIMARY_COLOR, SECONDARY_COLOR, TEXT_COLOR);
+        
+        // Add click handler to show full message
+        notificationCard.setOnMouseClicked(e -> {
+            showFullNotification(notif);
+            markAsRead(notif.notificationId);
+            
+            // Visual feedback - change background to indicate "read"
+            notificationCard.setStyle(
+                "-fx-background-color: #F8F8F8;" +
+                "-fx-background-radius: 8px;" +
+                "-fx-border-radius: 8px;" +
+                "-fx-border-color: #EEEEEE;" +
+                "-fx-border-width: 1px;" +
+                "-fx-padding: 12px;" +
+                "-fx-opacity: 0.7;"
+            );
+        });
+        
+        notificationList.getChildren().add(notificationCard);
+    }
+    
+    // "Mark All Read" button
+    Button markAllReadBtn = new Button("Mark All Read");
+    markAllReadBtn.setStyle(
+        "-fx-background-color: " + SECONDARY_COLOR + ";" +
+        "-fx-text-fill: " + TEXT_COLOR + ";" +
+        "-fx-font-weight: bold;" +
+        "-fx-font-size: 12px;" +
+        "-fx-padding: 8 15;" +
+        "-fx-background-radius: 5px;"
+    );
+    markAllReadBtn.setOnAction(e -> {
+        for (Notification notif : notifications) {
+            markAsRead(notif.notificationId);
+        }
+        dialog.close();
+    });
+    
+    HBox actionBox = new HBox(markAllReadBtn);
+    actionBox.setAlignment(Pos.CENTER_RIGHT);
+    actionBox.setPadding(new Insets(10, 0, 0, 0));
+    
+    // Scrollable container for notifications
+    ScrollPane scrollPane = new ScrollPane(notificationList);
+    scrollPane.setFitToWidth(true);
+    scrollPane.setStyle(
+        "-fx-background: transparent;" +
+        "-fx-background-color: transparent;" +
+        "-fx-padding: 5px;" +
+        "-fx-border-color: transparent;"
+    );
+    scrollPane.setPrefHeight(Math.min(notifications.size() * 80, 400));
+    scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+    
+    // Add all components to main container
+    mainContainer.getChildren().addAll(
+        headerBox, 
+        separator,
+        scrollPane,
+        actionBox
+    );
+    
+    // Configure dialog
+    DialogPane dialogPane = dialog.getDialogPane();
+    dialogPane.setContent(mainContainer);
+    dialogPane.getButtonTypes().add(ButtonType.CLOSE);
+    dialogPane.setPrefWidth(400);
+    
+    // Style the dialog
+    dialogPane.setStyle(
+        "-fx-background-color: " + BACKGROUND_COLOR + ";" +
+        "-fx-border-radius: 5px;" +
+        "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 10, 0, 0, 4);"
+    );
+    
+    dialog.showAndWait();
+}
+
+private HBox createNotificationCard(Notification notification, int index, String primaryColor, String secondaryColor, String textColor) {
+    // Handle timestamp - adjust field name as needed
+    String timeText;
+    try {
+        timeText = notification.getTimestamp() != null ?
+                notification.getTimestamp().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")) :
+                "Just now";
+    } catch (Exception e) {
+        timeText = "Just now";
+    }
+    Label timeLabel = new Label(timeText);
+    timeLabel.setStyle(
+        "-fx-font-size: 11px;" +
+        "-fx-text-fill: #888888;"
+    );
+    
+    // Message preview
+    String snippet = notification.message.length() > 60
+            ? notification.message.substring(0, 60) + "..."
+            : notification.message;
+    
+    Label messageLabel = new Label(snippet);
+    messageLabel.setStyle(
+        "-fx-font-size: 13px;" +
+        "-fx-text-fill: " + textColor + ";" +
+        "-fx-wrap-text: true;"
+    );
+    messageLabel.setWrapText(true);
+    messageLabel.setMaxWidth(Double.MAX_VALUE);
+    
+    // "Read more" hint
+    Label readMoreLabel = new Label("Tap to read more");
+    readMoreLabel.setStyle(
+        "-fx-font-size: 11px;" +
+        "-fx-text-fill: " + primaryColor + ";" +
+        "-fx-font-style: italic;"
+    );
+    
+    // Left indicator bar for visual interest (alternating colors)
+    Rectangle leftBar = new Rectangle(4, 60);
+    leftBar.setFill(Color.web(index % 2 == 0 ? primaryColor : secondaryColor));
+    leftBar.setArcWidth(2);
+    leftBar.setArcHeight(2);
+    
+    // Create text content
+    VBox textContent = new VBox(2, timeLabel, messageLabel);
+    if (notification.message.length() > 60) {
+        textContent.getChildren().add(readMoreLabel);
+    }
+    textContent.setPadding(new Insets(0, 0, 0, 10));
+    HBox.setHgrow(textContent, Priority.ALWAYS);
+    
+    // Circle indicator for unread (assuming all notifications are unread when fetched)
+    Circle unreadIndicator = new Circle(4);
+    unreadIndicator.setFill(Color.web(primaryColor));
+    
+    // Combine elements
+    HBox card = new HBox(leftBar, textContent, unreadIndicator);
+    card.setAlignment(Pos.CENTER_LEFT);
+    card.setPadding(new Insets(12));
+    card.setStyle(
+        "-fx-background-color: #FFFFFF;" +
+        "-fx-background-radius: 8px;" +
+        "-fx-border-radius: 8px;" +
+        "-fx-border-color: #EEEEEE;" +
+        "-fx-border-width: 1px;" +
+        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 3, 0, 0, 1);"
+    );
+    
+    // Hover effect
+    card.setOnMouseEntered(e -> {
+        card.setStyle(
+            "-fx-background-color: #FAFAFA;" +
+            "-fx-background-radius: 8px;" +
+            "-fx-border-radius: 8px;" +
+            "-fx-border-color: " + secondaryColor + ";" +
+            "-fx-border-width: 1px;" +
+            "-fx-padding: 12px;" +
+            "-fx-cursor: hand;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 5, 0, 0, 2);"
+        );
+    });
+    
+    card.setOnMouseExited(e -> {
+        card.setStyle(
+            "-fx-background-color: #FFFFFF;" +
+            "-fx-background-radius: 8px;" +
+            "-fx-border-radius: 8px;" +
+            "-fx-border-color: #EEEEEE;" +
+            "-fx-border-width: 1px;" +
+            "-fx-padding: 12px;" +
+            "-fx-cursor: hand;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.05), 3, 0, 0, 1);"
+        );
+    });
+    
+    return card;
+}
+
+private void showFullNotification(Notification notification) {
+    // Modern color palette
+    final String PRIMARY_COLOR = "#E57373";  // Softer red
+    final String SECONDARY_COLOR = "#F5F5F5"; // Light gray
+    final String BACKGROUND_COLOR = "#FFFFFF"; // White
+    final String TEXT_COLOR = "#424242";      // Dark gray (better readability)
+    final String ACCENT_COLOR = "#64B5F6";    // Blue for contrast
+    
+    // Create alert
+    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+    alert.setTitle("Notification Details");
+    alert.setHeaderText("New Message from Andok's");
+    
+    // Custom content with better typography
+    VBox content = new VBox(10);
+    content.setPadding(new Insets(15));
+    
+    // Notification message with improved styling
+    Label messageLabel = new Label(notification.getMessage());
+    messageLabel.setStyle(
+        "-fx-text-fill: " + TEXT_COLOR + ";" +
+        "-fx-font-size: 14px;" +
+        "-fx-font-family: 'Segoe UI', Roboto, sans-serif;" +
+        "-fx-wrap-text: true;" +
+        "-fx-max-width: 400px;"
+    );
+    
+    // Timestamp (if available)
+    Label timeLabel = new Label();
+    try {
+        if (notification.getTimestamp() != null) {
+            timeLabel.setText("Received: " + notification.getTimestamp()
+                .format(DateTimeFormatter.ofPattern("MMM dd, yyyy • hh:mm a")));
+        }
+    } catch (Exception e) {
+        timeLabel.setText("Received just now");
+    }
+    timeLabel.setStyle(
+        "-fx-text-fill: #757575;" +
+        "-fx-font-size: 12px;" +
+        "-fx-font-style: italic;"
+    );
+    
+    content.getChildren().addAll(messageLabel, timeLabel);
+    alert.getDialogPane().setContent(content);
+    
+    // Style the dialog
+    DialogPane dialogPane = alert.getDialogPane();
+    dialogPane.setStyle(
+        "-fx-background-color: " + BACKGROUND_COLOR + ";" +
+        "-fx-font-family: 'Segoe UI', Roboto, sans-serif;" +
+        "-fx-border-color: " + SECONDARY_COLOR + ";" +
+        "-fx-border-width: 1px;" +
+        "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 0);"
+    );
+    
+    // Header styling
+    dialogPane.lookupAll(".header-panel").forEach(node -> 
+        node.setStyle(
+            "-fx-background-color: linear-gradient(to right, " + PRIMARY_COLOR + ", #EF9A9A);" +
+            "-fx-padding: 15px;"
+        )
+    );
+    
+    // Header text styling
+    dialogPane.lookupAll(".header-panel .label").forEach(node -> 
+        node.setStyle(
+            "-fx-text-fill: white;" +
+            "-fx-font-size: 16px;" +
+            "-fx-font-weight: 700;" +  // Semi-bold
+            "-fx-alignment: center-left;"
+        )
+    );
+    
+    // Button styling
+    dialogPane.lookupAll(".button").forEach(node -> 
+        node.setStyle(
+            "-fx-background-color: " + PRIMARY_COLOR + ";" +
+            "-fx-text-fill: white;" +
+            "-fx-font-weight: bold;" +
+            "-fx-background-radius: 4px;" +
+            "-fx-padding: 8px 16px;"
+        )
+    );
+    
+    // Make window slightly larger
+    alert.getDialogPane().setMinSize(400, 200);
+    
+    alert.showAndWait();
+}
+
+private void styleAlert(Alert alert) {
+    // Constants for styling
+    final String PRIMARY_COLOR = "#FF5252"; // Red
+    final String BACKGROUND_COLOR = "#FFFFFF"; // White
+    
+    DialogPane dialogPane = alert.getDialogPane();
+    dialogPane.setStyle(
+        "-fx-background-color: " + BACKGROUND_COLOR + ";" +
+        "-fx-font-family: 'Segoe UI', Arial, sans-serif;"
+    );
+    
+    // Style the header panel
+    dialogPane.lookupAll(".header-panel").forEach(node -> {
+        node.setStyle("-fx-background-color: " + PRIMARY_COLOR + ";");
+    });
+    
+    // Style the header text
+    dialogPane.lookupAll(".header-panel .label").forEach(node -> {
+        node.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
+    });
+}
+
+    private void createCategoryButton(int categoryId, String categoryName, String imagePath) {
+        HBox categoryBox = new HBox(10);
+        categoryBox.setAlignment(Pos.CENTER_LEFT);
+        categoryBox.setPadding(new Insets(10));
+        categoryBox.setPrefWidth(Double.MAX_VALUE);
+        categoryBox.setStyle(
+            "-fx-background-color: " + ANDOKS_WHITE + ";" + 
+            "-fx-border-radius: 8px;" +
+            "-fx-background-radius: 8px;" +
+            "-fx-cursor: hand;"
+        );
+        
+        // Create circular background for category icon
+        StackPane iconContainer = new StackPane();
+        Circle iconBackground = new Circle(20);
+        iconBackground.setFill(Color.valueOf(ANDOKS_LIGHT_YELLOW));
+        
+        // Add category image
+        ImageView categoryImage = new ImageView(new Image("file:" + imagePath));
+        categoryImage.setFitHeight(24);
+        categoryImage.setFitWidth(24);
+        
+        iconContainer.getChildren().addAll(iconBackground, categoryImage);
+        
+        Label nameLabel = new Label(categoryName);
+        nameLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #333333;");
+        nameLabel.setWrapText(true);
+        
+        categoryBox.getChildren().addAll(iconContainer, nameLabel);
+        
+        // Hover effect
+        categoryBox.setOnMouseEntered(e -> {
+            categoryBox.setStyle(
+                "-fx-background-color: " + ANDOKS_YELLOW + ";" + 
+                "-fx-border-radius: 8px;" +
+                "-fx-background-radius: 8px;" +
+                "-fx-cursor: hand;" +
+                "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 4, 0, 0, 0);"
+            );
+            iconBackground.setFill(Color.valueOf(ANDOKS_WHITE));
+            nameLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: " + ANDOKS_RED + ";");
+            
+            // Small bounce effect
+            ScaleTransition scaleTransition = new ScaleTransition(Duration.millis(150), categoryBox);
+            scaleTransition.setToX(1.03);
+            scaleTransition.setToY(1.03);
+            scaleTransition.play();
+        });
+        
+        categoryBox.setOnMouseExited(e -> {
+            categoryBox.setStyle(
+                "-fx-background-color: " + ANDOKS_WHITE + ";" + 
+                "-fx-border-radius: 8px;" +
+                "-fx-background-radius: 8px;" +
+                "-fx-cursor: hand;"
+            );
+            iconBackground.setFill(Color.valueOf(ANDOKS_LIGHT_YELLOW));
+            nameLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #333333;");
+            
+            // Return to original scale
+            ScaleTransition scaleTransition = new ScaleTransition(Duration.millis(150), categoryBox);
+            scaleTransition.setToX(1.0);
+            scaleTransition.setToY(1.0);
+            scaleTransition.play();
+        });
+        
+        // Click effect
+        categoryBox.setOnMouseClicked(e -> {
+            highlightSelectedCategory(categoryBox);
+            loadCategoryItems(currentCategoryId, ""); // empty search
+
+        });
+        
+        sideBar.getChildren().add(categoryBox);
+        
+        // Set first category as active initially
+        if (sideBar.getChildren().size() == 2) { // Account for header label at index 0
+            highlightSelectedCategory(categoryBox);
+        }
+    }
+    
+    private void highlightSelectedCategory(HBox selectedCategory) {
+        // Reset all categories
+        for (int i = 1; i < sideBar.getChildren().size(); i++) { // Start from 1 to skip header
+            Node node = sideBar.getChildren().get(i);
+            if (node instanceof HBox) {
+                HBox categoryBox = (HBox) node;
+                categoryBox.setStyle(
+                    "-fx-background-color: " + ANDOKS_WHITE + ";" + 
+                    "-fx-border-radius: 8px;" +
+                    "-fx-background-radius: 8px;" +
+                    "-fx-cursor: hand;"
+                );
+                
+                // Reset label style
+                for (Node childNode : categoryBox.getChildren()) {
+                    if (childNode instanceof Label) {
+                        ((Label) childNode).setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #333333;");
+                    }
+                    
+                    // Reset circle color
+                    if (childNode instanceof StackPane) {
+                        for (Node stackNode : ((StackPane) childNode).getChildren()) {
+                            if (stackNode instanceof Circle) {
+                                ((Circle) stackNode).setFill(Color.valueOf(ANDOKS_LIGHT_YELLOW));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Highlight selected category
+        selectedCategory.setStyle(
+            "-fx-background-color: " + ANDOKS_RED + ";" + 
+            "-fx-border-radius: 8px;" +
+            "-fx-background-radius: 8px;" +
+            "-fx-cursor: hand;" +
+            "-fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 4, 0, 0, 0);"
+        );
+        
+        // Update label and circle in the selected category
+        for (Node childNode : selectedCategory.getChildren()) {
+            if (childNode instanceof Label) {
+                ((Label) childNode).setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: " + ANDOKS_WHITE + ";");
+            }
+            
+            // Update circle color
+            if (childNode instanceof StackPane) {
+                for (Node stackNode : ((StackPane) childNode).getChildren()) {
+                    if (stackNode instanceof Circle) {
+                        ((Circle) stackNode).setFill(Color.valueOf(ANDOKS_YELLOW));
+                    }
+                }
+            }
+        }
+    }
+  
+
     
    private boolean isStoreOpen() {
     String query = "{CALL GetStoreStatus()}"; // Stored procedure call
@@ -129,99 +961,7 @@ public class CustomerDashboard extends Application {
 }
 
 
-    private HBox createTopBar() {
-        HBox topBar = new HBox(10);
-        topBar.setPadding(new Insets(10));
-        topBar.setAlignment(Pos.CENTER_RIGHT);
-        topBar.setStyle("-fx-background-color: #333; -fx-padding: 15;");
-
-        // 🔍 Search Bar
-        TextField searchField = new TextField();
-        searchField.setPromptText("Search menu...");
-        searchField.setPrefWidth(200);
-        
-       
-      // Create a more elegant cart button with counter
-            Button cartBtn = new Button();
-            cartBtn.setGraphic(new FontIcon("fas-shopping-cart"));  // Using FontAwesome icon
-            cartBtn.setStyle("-fx-background-color: #f8f9fa; -fx-padding: 5px;");
-            cartBtn.setOnAction(e -> showCart());
-
-            // Create a more refined cart count indicator
-            cartCountLabel = new Label("0");
-            cartCountLabel.setStyle(
-                "-fx-background-color: #e74c3c;" +   // Softer red color
-                "-fx-text-fill: white;" +
-                "-fx-font-size: 10px;" +             // Smaller font
-                "-fx-padding: 1px 4px;" +            // Tighter padding
-                "-fx-background-radius: 10;" +       // Smaller circle
-                "-fx-min-width: 16px;" +             // Consistent width
-                "-fx-alignment: center;" +           // Center text
-                "-fx-font-weight: bold;"             // Bold text for better readability
-            );
-            cartCountLabel.setVisible(false);        // Initially hidden if cart is empty
-
-            // Position the count indicator properly
-            StackPane cartButtonPane = new StackPane();
-            cartButtonPane.getChildren().addAll(cartBtn, cartCountLabel);
-            StackPane.setAlignment(cartCountLabel, Pos.TOP_RIGHT);
-            StackPane.setMargin(cartCountLabel, new Insets(-2, -2, 0, 0));  // Slight adjustment to position
-
-            
-        // 🔔 Notification Button
-        Button notifBtn = new Button("🔔");
-        notifBtn.setStyle("-fx-background-color: #f8f9fa; -fx-padding: 5px;");
-        notifBtn.setOnAction(e -> showNotification());
-
-       // 🔢 Notification count badge
-        Label notifCountLabel = new Label();
-        notifCountLabel.setStyle(
-            "-fx-background-color: #e74c3c;" +
-            "-fx-text-fill: white;" +
-            "-fx-font-size: 10px;" +
-            "-fx-padding: 1px 4px;" +
-            "-fx-background-radius: 10;" +
-            "-fx-min-width: 16px;" +
-            "-fx-alignment: center;" +
-            "-fx-font-weight: bold;"
-        );
-        notifCountLabel.setVisible(false); // Hide if no unread notifications
-
-        // 🔁 Function to update the count dynamically
-        int customerId = getCustomerIdFromUserId(userID);
-        int unreadCount = getUnreadNotificationCount(customerId);
-
-        if (unreadCount > 0) {
-            notifCountLabel.setText(String.valueOf(unreadCount));
-            notifCountLabel.setVisible(true);  // Show if there's a count > 0
-        } else {
-            notifCountLabel.setVisible(false); // Hide if no unread notifications
-        }
-
-        // 📦 Stack notif button and badge
-        StackPane notifButtonPane = new StackPane();
-        notifButtonPane.getChildren().addAll(notifBtn, notifCountLabel);
-        StackPane.setAlignment(notifCountLabel, Pos.TOP_RIGHT);
-        StackPane.setMargin(notifCountLabel, new Insets(-2, -2, 0, 0));  // Position adjustment
-
-        // 👤 Profile Button
-        Button profileBtn = new Button("👤");
-        profileBtn.setOnAction(e -> {
-            Customer customer = CustomerDAO.getCustomerByUserId(userID);
-            if (customer != null) {
-                
-                CustomerProfile profile = new CustomerProfile();
-                profile.show(primaryStage, customer, userID); // ← perfect!
-
-            } else {
-                System.out.println("⚠️ No customer found for user ID " + userID);
-            }
-});
-
-
-        topBar.getChildren().addAll(searchField, notifBtn, cartButtonPane, profileBtn);
-        return topBar;
-    }
+   
     
         public void updateCartCount(int count) {
         Platform.runLater(() -> {
@@ -229,6 +969,10 @@ public class CustomerDashboard extends Application {
             cartCountLabel.setVisible(count > 0);
         });
 }
+        
+ 
+    
+        
 private int getUnreadNotificationCount(int customerId) {
     String query = "{CALL GetUnreadNotificationCount(?, ?)}"; // Call the stored procedure
     int unreadCount = 0;
@@ -256,59 +1000,6 @@ private int getUnreadNotificationCount(int customerId) {
     return unreadCount;
 }
 
-
-   
-    
-   private VBox createMenuItemBox(String itemName, String imagePath, double price) {
-        VBox itemBox = new VBox(10);
-        itemBox.setPadding(new Insets(10));
-        itemBox.setAlignment(Pos.CENTER);
-        itemBox.setStyle("-fx-background-color: #f8f8f8; -fx-border-radius: 10px; -fx-padding: 10px;");
-
-        ImageView imageView = new ImageView(new Image("file:" + imagePath));
-        
-
-        imageView.setFitWidth(120);
-        imageView.setFitHeight(120);
-
-        Label nameLabel = new Label(itemName);
-        nameLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold;");
-
-        // Add price label
-        Label priceLabel = new Label("₱" + price);
-        priceLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #555555;");
-
-        // ⏩ Open details window on click (you might need to pass the price here too)
-        itemBox.setOnMouseClicked(e -> MenuDetails.showItemDetails(itemName));
-
-        itemBox.getChildren().addAll(imageView, nameLabel, priceLabel);
-        return itemBox;
-    }
-   
-
-
-    private void openItemDetails(String itemName) {
-        Stage itemStage = new Stage();
-        VBox itemLayout = new VBox(10);
-        itemLayout.setPadding(new Insets(20));
-        itemLayout.setAlignment(Pos.CENTER);
-
-        Label itemLabel = new Label("Details for: " + itemName);
-        itemLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
-
-        Button closeButton = new Button("Close");
-        closeButton.setOnAction(e -> itemStage.close());
-
-        itemLayout.getChildren().addAll(itemLabel, closeButton);
-
-        Scene scene = new Scene(itemLayout, 300, 200);
-        itemStage.setScene(scene);
-        itemStage.setTitle(itemName + " Details");
-        itemStage.show();
-}
-
-    
-
     private void loadCategories() {
         sideBar.getChildren().clear(); // Clear previous items
         String query = "{CALL GetCategories()}"; // Stored procedure call
@@ -322,9 +1013,12 @@ private int getUnreadNotificationCount(int customerId) {
                 Button categoryBtn = new Button(category);
                 categoryBtn.setMaxWidth(Double.MAX_VALUE);
                 int categoryID = rs.getInt("category_id");
-                categoryBtn.setOnAction(e -> loadCategoryItems(categoryID)); // ✅ Load menu items on click
-                sideBar.getChildren().add(categoryBtn);
-            }
+                categoryBtn.setOnAction(e -> {
+                currentCategoryId = categoryID;
+                loadCategoryItems(currentCategoryId, searchField.getText()); // with current search
+            });
+            sideBar.getChildren().add(categoryBtn);
+                        }
 
         } catch (SQLException e) {
             e.printStackTrace();
@@ -355,20 +1049,26 @@ private int getUnreadNotificationCount(int customerId) {
 }
 
 
-private void loadCategoryItems(int categoryId) {
+private void loadCategoryItems(int categoryId, String searchTerm) {
     menuGrid.getChildren().clear();
-    System.out.println("Loading items for category ID: " + categoryId);
+    System.out.println("Loading items for category ID: " + categoryId + " with search term: " + searchTerm);
 
-    // Only load items that are marked as 'Available'
     String query = "SELECT * FROM menu_items WHERE category_id = ? AND availability = 'Available'";
+    if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+        query += " AND LOWER(name) LIKE ?";
+    }
 
     try (Connection conn = Database.connect();
          PreparedStatement stmt = conn.prepareStatement(query)) {
 
         stmt.setInt(1, categoryId);
-        ResultSet rs = stmt.executeQuery();
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            stmt.setString(2, "%" + searchTerm.toLowerCase() + "%");
+        }
 
+        ResultSet rs = stmt.executeQuery();
         int row = 0, col = 0;
+        int maxColumns = 5;
         while (rs.next()) {
             String itemName = rs.getString("name");
             String imagePath = rs.getString("image_path");
@@ -378,7 +1078,7 @@ private void loadCategoryItems(int categoryId) {
             menuGrid.add(itemBox, col, row);
 
             col++;
-            if (col > 2) { // 3 columns per row
+            if (col > maxColumns) {
                 col = 0;
                 row++;
             }
@@ -388,6 +1088,7 @@ private void loadCategoryItems(int categoryId) {
         e.printStackTrace();
     }
 }
+
         private int getCustomerIdFromUserId(int userId) {
             String query = "{CALL GetCustomerIdFromUserId(?, ?)}"; // Stored procedure call
             int customerId = -1;
@@ -419,70 +1120,6 @@ private void loadCategoryItems(int categoryId) {
 
 
 
- private void showNotification() {
-  // Replace with your session logic
-    int customerId = getCustomerIdFromUserId(userID); // ✅ Fetch based on userID
-    System.out.println("Fetching notifications from " + customerId);
-
-    if (customerId == -1) {
-        Alert alert = new Alert(Alert.AlertType.ERROR, "Unable to fetch notifications (no customer found).", ButtonType.OK);
-        alert.showAndWait();
-        return;
-    }
-    List<Notification> notifications = fetchNotifications(customerId);
-
-    if (notifications.isEmpty()) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION, "No new notifications.", ButtonType.OK);
-        alert.showAndWait();
-        return;
-    }
-
-    // Create a dialog
-    Dialog<Void> dialog = new Dialog<>();
-    dialog.setTitle("🔔 Notifications");
-
-    VBox notificationList = new VBox(10);
-    notificationList.setPadding(new Insets(10));
-
-    for (Notification notif : notifications) {
-        String snippet = notif.message.length() > 50
-                ? notif.message.substring(0, 50) + "..."
-                : notif.message;
-
-        Label label = new Label(snippet);
-        label.setStyle("""
-            -fx-background-color: #f9f9f9;
-            -fx-padding: 10px;
-            -fx-border-color: #cccccc;
-            -fx-border-width: 1px;
-            -fx-border-radius: 8px;
-            -fx-background-radius: 8px;
-            -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 4, 0, 0, 2);
-        """);
-        label.setMaxWidth(Double.MAX_VALUE);
-        label.setWrapText(true);
-
-        label.setOnMouseClicked(e -> {
-            Alert fullMessage = new Alert(Alert.AlertType.INFORMATION);
-            fullMessage.setTitle("📨 Full Notification");
-            fullMessage.setHeaderText("From Andok's");
-            fullMessage.setContentText(notif.message);
-            fullMessage.showAndWait();
-
-            markAsRead(notif.notificationId);
-        });
-
-        notificationList.getChildren().add(label);
-    }
-
-    ScrollPane scrollPane = new ScrollPane(notificationList);
-    scrollPane.setFitToWidth(true);
-    scrollPane.setPrefHeight(400);
-
-    dialog.getDialogPane().setContent(scrollPane);
-    dialog.getDialogPane().getButtonTypes().add(ButtonType.CLOSE);
-    dialog.showAndWait();
-}
  
  private List<Notification> fetchNotifications(int customerId) {
     List<Notification> list = new ArrayList<>();
@@ -533,13 +1170,7 @@ private void markAsRead(int notificationId) {
 
         }
 
-
-
-    private void showProfile() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION, "Profile Details Here", ButtonType.OK);
-        alert.showAndWait();
-    }
-
+  
     public static void main(String[] args) {
         launch(args);
     }

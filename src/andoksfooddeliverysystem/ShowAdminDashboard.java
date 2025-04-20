@@ -8,9 +8,14 @@ import javafx.scene.layout.VBox;
 import java.sql.*;
 import java.text.DateFormatSymbols;
 import java.text.SimpleDateFormat;
+import java.util.Date; // ✅ This one!
+import java.util.Calendar;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
@@ -53,7 +58,11 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
+import javafx.util.Duration;
 import javax.mail.MessagingException;
 
 
@@ -61,20 +70,26 @@ import javax.mail.MessagingException;
 public class ShowAdminDashboard {
     private VBox root;
     private int userID;
-
     private Label storeStatusLabel = new Label("Loading...");
     private Button toggleShopButton = new Button("Toggle Shop");
-
     private Label adminNameLabel = new Label("Admin Name");
     private Label adminEmailLabel = new Label("admin@email.com");
-
     private Label ordersTodayLabel = new Label("Loading...");
     private Label customersTodayLabel = new Label("Loading...");
-    
     private Label allOrdersLabel = new Label("Loading...");
-
     private LineChart<String, Number> lineChart;
-
+    
+    // Brand color constants
+    private static final String PRIMARY_RED = "#C81D24";
+    private static final String ACCENT_YELLOW = "#FFBA00";
+    private static final String WHITE = "#FFFFFF";
+    private static final String LIGHT_GRAY = "#F5F5F5";
+    private static final String MEDIUM_GRAY = "#E0E0E0";
+    private static final String DARK_TEXT = "#2B2B2B";
+    private static final String LIGHT_TEXT = "#6C757D";
+    private static final String SUCCESS_GREEN = "#28A745";
+    private static final String DANGER_RED = "#DC3545";
+    
     public ShowAdminDashboard(int userID) throws MessagingException {
         this.userID = userID;
         createUI();
@@ -82,43 +97,569 @@ public class ShowAdminDashboard {
         loadStoreStatus();
         loadTodayStats();
     }
+    
+   private void createUI() {
+        // Inner VBox that holds all sections
+        VBox content = new VBox(30);
+        content.setPadding(new Insets(30));
+        content.setStyle("-fx-background-color: " + LIGHT_GRAY + ";");
 
-    private void createUI() {
-    // Profile Section
-    VBox profileBox = new VBox(10, adminNameLabel, adminEmailLabel);
-    profileBox.setPadding(new Insets(10));
-    profileBox.setStyle("-fx-border-color: gray; -fx-border-width: 1;");
+        // Sections
+        HBox welcomeSection = createWelcomeSection();
 
-    // Store Section
-    VBox storeBox = new VBox(10, storeStatusLabel, toggleShopButton);
-    storeBox.setPadding(new Insets(10));
-    toggleShopButton.setOnAction(e -> {
-        try {
-            toggleShop();
-        } catch (MessagingException ex) {
-            Logger.getLogger(ShowAdminDashboard.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    });
+        Label dashboardHeader = new Label("DASHBOARD OVERVIEW");
+        dashboardHeader.setStyle(
+            "-fx-font-family: 'Poppins', sans-serif;" +
+            "-fx-font-size: 24px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-text-fill: " + DARK_TEXT + ";"
+        );
 
-    // Stats Section
-    VBox statsBox = new VBox(10, ordersTodayLabel, customersTodayLabel, allOrdersLabel);
-    statsBox.setPadding(new Insets(10));
+        HBox statusCardsSection = createStatusCardsSection();
+        HBox adminAndStoreSection = createAdminAndStoreSection();
+        VBox performanceSection = createPerformanceSection();
 
-        // Performance Section (to add now)
-    VBox performanceBox = createPerformanceSection();
+        // Add all UI sections to content VBox
+        content.getChildren().addAll(
+            welcomeSection,
+            dashboardHeader,
+            statusCardsSection,
+            adminAndStoreSection,
+            performanceSection
+        );
 
-    // Wrap the performanceBox in a ScrollPane for scrolling ability
-    ScrollPane performanceScrollPane = new ScrollPane(performanceBox);
-    performanceScrollPane.setFitToWidth(true); // Ensures it fills the width
+        // Wrap the entire content in a ScrollPane
+        ScrollPane scrollPane = new ScrollPane(content);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setStyle(
+            "-fx-background: " + WHITE + ";" +
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-padding: 0;" +
+            "-fx-background-insets: 0;" +
+            "-fx-border-width: 0;"
+        );
 
-    // Main Layout
-    root = new VBox(20, profileBox, storeBox, statsBox, performanceScrollPane);
-    root.setPadding(new Insets(20));
-}
+        // Set scrollPane as the root of the scene or main layout
+        root = new VBox(); // Replace or clear previous root
+        root.getChildren().add(scrollPane);
+    }
 
-    public Node getRoot() {
+    private HBox createWelcomeSection() {
+        HBox welcomeBox = new HBox();
+        welcomeBox.setAlignment(Pos.CENTER_LEFT);
+        welcomeBox.setSpacing(15);
+        
+        // Current date and greeting
+        SimpleDateFormat dateFormat = new SimpleDateFormat("EEEE, MMMM d, yyyy");
+        String currentDate = dateFormat.format(new Date());
+        
+        Label dateLabel = new Label(currentDate);
+        dateLabel.setStyle(
+            "-fx-font-size: 16px;" +
+            "-fx-text-fill: " + LIGHT_TEXT + ";"
+        );
+        
+        // Add time updater
+        Label timeLabel = new Label();
+        timeLabel.setStyle(
+            "-fx-font-size: 16px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-text-fill: " + PRIMARY_RED + ";"
+        );
+        
+        // Update time every second
+        Timeline timeline = new Timeline(new KeyFrame(
+            Duration.seconds(1),
+            event -> {
+                SimpleDateFormat timeFormat = new SimpleDateFormat("h:mm:ss a");
+                timeLabel.setText(timeFormat.format(new Date()));
+            }
+        ));
+        timeline.setCycleCount(Animation.INDEFINITE);
+        timeline.play();
+        
+        // Spacer
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+        
+        // Current hour for greeting
+        int hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY);
+        String greeting = (hour < 12) ? "Good Morning" : (hour < 18) ? "Good Afternoon" : "Good Evening";
+        
+        Label greetingLabel = new Label(greeting + ", Admin");
+        greetingLabel.setStyle(
+            "-fx-font-size: 18px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-text-fill: " + DARK_TEXT + ";"
+        );
+        
+        welcomeBox.getChildren().addAll(dateLabel, timeLabel, spacer, greetingLabel);
+        
+        return welcomeBox;
+    }
+    
+    private HBox createStatusCardsSection() {
+        HBox cardsContainer = new HBox(20);
+        cardsContainer.setAlignment(Pos.CENTER);
+        
+        // Orders Today Card
+        VBox ordersCard = createMetricCard("ORDERS TODAY", ordersTodayLabel, "📊", PRIMARY_RED);
+        
+        // Customers Today Card
+        VBox customersCard = createMetricCard("CUSTOMERS TODAY", customersTodayLabel, "👥", ACCENT_YELLOW);
+        
+        // All-Time Orders Card
+        VBox allOrdersCard = createMetricCard("TOTAL ORDERS", allOrdersLabel, "📈", SUCCESS_GREEN);
+        
+        cardsContainer.getChildren().addAll(ordersCard, customersCard, allOrdersCard);
+        
+        return cardsContainer;
+    }
+    
+    private VBox createMetricCard(String title, Label valueLabel, String icon, String accentColor) {
+        // Set the style for the value label
+        valueLabel.setStyle(
+            "-fx-font-size: 16px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-text-fill: " + DARK_TEXT + ";"
+        );
+        
+        // Create title label
+        Label titleLabel = new Label(title);
+        titleLabel.setStyle(
+            "-fx-font-size: 14px;" +
+            "-fx-text-fill: " + LIGHT_TEXT + ";" +
+            "-fx-padding: 0 0 5 0;"
+        );
+        
+        // Create icon
+        Label iconLabel = new Label(icon);
+        iconLabel.setStyle(
+            "-fx-font-size: 18px;" +
+            "-fx-text-fill: " + WHITE + ";" +
+            "-fx-background-color: " + accentColor + ";" +
+            "-fx-background-radius: 50%;" +
+            "-fx-min-width: 40px;" +
+            "-fx-min-height: 40px;" +
+            "-fx-alignment: center;"
+        );
+        
+        // Layout for title and value
+        VBox textContent = new VBox(5);
+        textContent.getChildren().addAll(titleLabel, valueLabel);
+        
+        // Container for icon and text content
+        HBox contentLayout = new HBox(15);
+        contentLayout.setAlignment(Pos.CENTER_LEFT);
+        contentLayout.setPadding(new Insets(15));
+        contentLayout.getChildren().addAll(iconLabel, textContent);
+        
+        // Main card container
+        VBox card = new VBox(contentLayout);
+        card.setStyle(
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-background-radius: 10px;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 3);" +
+            "-fx-min-width: 280px;" +
+            "-fx-min-height: 100px;"
+        );
+        
+        // Animate on hover
+        card.setOnMouseEntered(e -> {
+            card.setStyle(
+                "-fx-background-color: " + WHITE + ";" +
+                "-fx-background-radius: 10px;" +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.2), 15, 0, 0, 5);" +
+                "-fx-min-width: 280px;" +
+                "-fx-min-height: 100px;"
+            );
+        });
+        
+        card.setOnMouseExited(e -> {
+            card.setStyle(
+                "-fx-background-color: " + WHITE + ";" +
+                "-fx-background-radius: 10px;" +
+                "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 3);" +
+                "-fx-min-width: 280px;" +
+                "-fx-min-height: 100px;"
+            );
+        });
+        
+        return card;
+    }
+    
+    private HBox createAdminAndStoreSection() {
+        HBox container = new HBox(20);
+        
+        // Admin Profile Card
+        VBox profileBox = createAdminProfileCard();
+        
+        // Store Status Card
+        VBox storeBox = createStoreStatusCard();
+        
+        container.getChildren().addAll(profileBox, storeBox);
+        
+        return container;
+    }
+    
+    private VBox createAdminProfileCard() {
+        // Update styling for admin labels
+        adminNameLabel.setStyle(
+            "-fx-font-size: 18px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-text-fill: " + DARK_TEXT + ";"
+        );
+        
+        adminEmailLabel.setStyle(
+            "-fx-font-size: 14px;" +
+            "-fx-text-fill: " + LIGHT_TEXT + ";"
+        );
+        
+        // Avatar placeholder
+        Circle avatar = new Circle(40);
+        avatar.setFill(Color.web(PRIMARY_RED));
+        
+        Text avatarText = new Text("A");
+        avatarText.setFill(Color.WHITE);
+        avatarText.setFont(Font.font("Arial", FontWeight.BOLD, 30));
+        
+        StackPane avatarPane = new StackPane(avatar, avatarText);
+        
+        // Admin info layout
+        VBox adminInfo = new VBox(5);
+        adminInfo.getChildren().addAll(adminNameLabel, adminEmailLabel);
+        
+        // Row with avatar and admin info
+        HBox profileRow = new HBox(15);
+        profileRow.setAlignment(Pos.CENTER_LEFT);
+        profileRow.getChildren().addAll(avatarPane, adminInfo);
+        
+        // Last login info
+        Label lastLoginLabel = new Label("Last Login: Today, 08:45 AM");
+        lastLoginLabel.setStyle(
+            "-fx-font-size: 12px;" +
+            "-fx-text-fill: " + LIGHT_TEXT + ";" +
+            "-fx-padding: 10 0 0 0;"
+        );
+        
+        // Card container
+        VBox profileCard = new VBox(15);
+        profileCard.setPadding(new Insets(20));
+        profileCard.getChildren().addAll(profileRow, lastLoginLabel);
+        profileCard.setStyle(
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-background-radius: 10px;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 3);" +
+            "-fx-min-width: 350px;"
+        );
+        
+        return profileCard;
+    }
+    
+    private VBox createStoreStatusCard() {
+        // Section title
+        Label storeTitle = new Label("STORE STATUS");
+        storeTitle.setStyle(
+            "-fx-font-size: 14px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-text-fill: " + LIGHT_TEXT + ";"
+        );
+        
+        // Status indicator
+        storeStatusLabel.setStyle(
+            "-fx-font-size: 18px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-text-fill: " + SUCCESS_GREEN + ";"
+        );
+        
+        // Better toggle button
+        toggleShopButton.setStyle(
+            "-fx-background-color: " + PRIMARY_RED + ";" +
+            "-fx-text-fill: " + WHITE + ";" +
+            "-fx-font-weight: bold;" +
+            "-fx-background-radius: 5px;" +
+            "-fx-padding: 10px 20px;" +
+            "-fx-cursor: hand;"
+        );
+        
+        // Hover effect
+        toggleShopButton.setOnMouseEntered(e -> {
+            toggleShopButton.setStyle(
+                "-fx-background-color: #A01118;" + // Darker red
+                "-fx-text-fill: " + WHITE + ";" +
+                "-fx-font-weight: bold;" +
+                "-fx-background-radius: 5px;" +
+                "-fx-padding: 10px 20px;" +
+                "-fx-cursor: hand;"
+            );
+        });
+        
+        toggleShopButton.setOnMouseExited(e -> {
+            toggleShopButton.setStyle(
+                "-fx-background-color: " + PRIMARY_RED + ";" +
+                "-fx-text-fill: " + WHITE + ";" +
+                "-fx-font-weight: bold;" +
+                "-fx-background-radius: 5px;" +
+                "-fx-padding: 10px 20px;" +
+                "-fx-cursor: hand;"
+            );
+        });
+        
+        // Keep the original action
+        toggleShopButton.setOnAction(e -> {
+            try {
+                toggleShop();
+            } catch (MessagingException ex) {
+                Logger.getLogger(ShowAdminDashboard.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        });
+        
+        // Opening hours info
+        VBox hoursInfo = new VBox(5);
+        hoursInfo.setPadding(new Insets(10, 0, 0, 0));
+        
+        Label businessHoursLabel = new Label("BUSINESS HOURS");
+        businessHoursLabel.setStyle(
+            "-fx-font-size: 12px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-text-fill: " + LIGHT_TEXT + ";"
+        );
+        
+        Label weekdaysLabel = new Label("Mon-Sun: 8:00 AM - 8:00 PM");
+        weekdaysLabel.setStyle(
+            "-fx-font-size: 12px;" +
+            "-fx-text-fill: " + DARK_TEXT + ";"
+        );
+   
+        
+        hoursInfo.getChildren().addAll(
+            businessHoursLabel,
+            weekdaysLabel
+            
+        );
+        
+        // Combine into store card layout
+        VBox storeCardContent = new VBox(15);
+        storeCardContent.getChildren().addAll(
+            storeTitle,
+            storeStatusLabel,
+            toggleShopButton,
+            hoursInfo
+        );
+        
+        // Card container
+        VBox storeCard = new VBox(storeCardContent);
+        storeCard.setPadding(new Insets(20));
+        storeCard.setStyle(
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-background-radius: 10px;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 3);" +
+            "-fx-min-width: 350px;"
+        );
+        
+        return storeCard;
+    }
+    
+    private VBox createPerformanceSection() {
+        // Section header
+        Label performanceTitle = new Label("PERFORMANCE ANALYTICS");
+        performanceTitle.setStyle(
+            "-fx-font-size: 20px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-text-fill: " + DARK_TEXT + ";" +
+            "-fx-padding: 0 0 10 0;"
+        );
+        
+        // Generate Report Button
+        Button generateReportButton = new Button("Generate Report");
+        generateReportButton.setGraphic(new Label("📊"));
+        generateReportButton.setGraphicTextGap(10);
+        generateReportButton.setStyle(
+            "-fx-background-color: " + ACCENT_YELLOW + ";" +
+            "-fx-text-fill: " + DARK_TEXT + ";" +
+            "-fx-font-weight: bold;" +
+            "-fx-background-radius: 5px;" +
+            "-fx-padding: 10px 20px;" +
+            "-fx-cursor: hand;"
+        );
+        
+        // Hover effect
+        generateReportButton.setOnMouseEntered(e -> {
+            generateReportButton.setStyle(
+                "-fx-background-color: #E6A700;" + // Darker yellow
+                "-fx-text-fill: " + DARK_TEXT + ";" +
+                "-fx-font-weight: bold;" +
+                "-fx-background-radius: 5px;" +
+                "-fx-padding: 10px 20px;" +
+                "-fx-cursor: hand;"
+            );
+        });
+        
+        generateReportButton.setOnMouseExited(e -> {
+            generateReportButton.setStyle(
+                "-fx-background-color: " + ACCENT_YELLOW + ";" +
+                "-fx-text-fill: " + DARK_TEXT + ";" +
+                "-fx-font-weight: bold;" +
+                "-fx-background-radius: 5px;" +
+                "-fx-padding: 10px 20px;" +
+                "-fx-cursor: hand;"
+            );
+        });
+        
+        // Keep original action
+        generateReportButton.setOnAction(e -> {
+            ReportGenerator reportGenerator = new ReportGenerator();
+            reportGenerator.generateReport();
+        });
+        
+        // Header and button in a row
+        HBox headerRow = new HBox(generateReportButton);
+        headerRow.setAlignment(Pos.CENTER_RIGHT);
+        
+        // Create styled sections
+        VBox pieCharts = stylePieChartsPanel(createPieChartsPanel());
+        VBox revenueChartPanel = styleChartPanel(createRevenueChartPanel(), "REVENUE TRENDS");
+        
+        // Category and Rider charts in split pane with styling
+        VBox menuCategoryChart = styleChartPanel(createMenuCategoryChartPanel(), "MENU CATEGORY PERFORMANCE");
+        VBox riderOrdersChart = styleChartPanel(createRiderOrdersChartPanel(), "RIDER ORDER DISTRIBUTION");
+        
+        // Create a styled container for the split pane
+        HBox chartsContainer = new HBox(20);
+        chartsContainer.getChildren().addAll(menuCategoryChart, riderOrdersChart);
+        
+        // Style rider dashboard
+        VBox riderDashboard = styleGenericPanel(createRiderPerformanceDashboard(), "RIDER PERFORMANCE");
+        
+        // Style customer table
+        VBox customerTableBox = new VBox(10);
+        ComboBox<String> customerTableFilter = new ComboBox<>();
+        customerTableFilter.getItems().addAll("Today", "This Week", "This Month", "All Time");
+        customerTableFilter.setValue("All Time");
+        customerTableFilter.setStyle(
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-border-color: " + MEDIUM_GRAY + ";" +
+            "-fx-border-radius: 3px;" +
+            "-fx-padding: 5px;"
+        );
+        
+        GridPane customerTable = createLoyalCustomerTable("All Time");
+        customerTableFilter.setOnAction(e -> {
+            String selected = customerTableFilter.getValue();
+            customerTableBox.getChildren().set(1, createLoyalCustomerTable(selected));
+        });
+        
+        HBox filterContainer = new HBox(10);
+        filterContainer.setAlignment(Pos.CENTER_LEFT);
+        
+        Label filterLabel = new Label("Filter Period:");
+        filterLabel.setStyle(
+            "-fx-font-size: 14px;" +
+            "-fx-text-fill: " + DARK_TEXT + ";"
+        );
+        
+        filterContainer.getChildren().addAll(filterLabel, customerTableFilter);
+        customerTableBox.getChildren().addAll(filterContainer, customerTable);
+        
+        VBox loyalCustomersPanel = styleGenericPanel(customerTableBox, "LOYAL CUSTOMERS");
+        
+        // Style ratings viewer
+        VBox ratingsView = styleGenericPanel(createRatingsViewer(), "CUSTOMER RATINGS");
+        
+        // Main layout
+        VBox performanceBox = new VBox(20);
+        performanceBox.setPadding(new Insets(20, 0, 30, 0));
+        performanceBox.getChildren().addAll(
+            performanceTitle,
+            headerRow,
+            pieCharts,
+            revenueChartPanel,
+            chartsContainer,
+            riderDashboard,
+            loyalCustomersPanel,
+            ratingsView
+        );
+        
+        return performanceBox;
+    }
+    
+    // Helper method to style pie charts panel
+    private VBox stylePieChartsPanel(VBox original) {
+        // Apply styling to the panel
+        VBox styledPanel = new VBox(15);
+        styledPanel.getChildren().addAll(original.getChildren());
+        styledPanel.setPadding(new Insets(20));
+        styledPanel.setStyle(
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-background-radius: 10px;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 3);"
+        );
+        
+        // Add section title
+        Label sectionTitle = new Label("KEY METRICS DISTRIBUTION");
+        sectionTitle.setStyle(
+            "-fx-font-size: 16px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-text-fill: " + DARK_TEXT + ";"
+        );
+        
+        styledPanel.getChildren().add(0, sectionTitle);
+        
+        return styledPanel;
+    }
+    
+    // Helper method to style chart panels
+    private VBox styleChartPanel(VBox original, String title) {
+        // Apply styling to the panel
+        VBox styledPanel = new VBox(15);
+        styledPanel.getChildren().addAll(original.getChildren());
+        styledPanel.setPadding(new Insets(20));
+        styledPanel.setStyle(
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-background-radius: 10px;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 3);"
+        );
+        
+        // Add section title
+        Label sectionTitle = new Label(title);
+        sectionTitle.setStyle(
+            "-fx-font-size: 16px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-text-fill: " + DARK_TEXT + ";"
+        );
+        
+        styledPanel.getChildren().add(0, sectionTitle);
+        
+        return styledPanel;
+    }
+    
+    // Helper method for generic panel styling
+    private VBox styleGenericPanel(Node content, String title) {
+        // Create styled container
+        VBox styledPanel = new VBox(15);
+        
+        // Add section title
+        Label sectionTitle = new Label(title);
+        sectionTitle.setStyle(
+            "-fx-font-size: 16px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-text-fill: " + DARK_TEXT + ";"
+        );
+        
+        styledPanel.getChildren().addAll(sectionTitle, content);
+        styledPanel.setPadding(new Insets(20));
+        styledPanel.setStyle(
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-background-radius: 10px;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 3);"
+        );
+        
+        return styledPanel;
+    }
+     public Node getRoot() {
         return root;
     }
+
 
   private void loadAdminDetails(int userId) {
     String query = "SELECT full_name, email FROM users WHERE user_id = ?";
@@ -407,65 +948,6 @@ private void loadTodayStats() {
     }
 }
 
-private VBox createPerformanceSection() {
-    // Title for Performance
-    Label performanceTitle = new Label("Performance Section");
-    performanceTitle.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
-
-    // Generate Report Button
-   Button generateReportButton = new Button("Generate Report");
-        generateReportButton.setOnAction(e -> {
-            // When the button is clicked, generate the report
-            ReportGenerator reportGenerator = new ReportGenerator(); // Create instance of ReportGenerator
-            reportGenerator.generateReport(); // Call the method to generate the report
-        });
-
-
-    
-    VBox pieCharts = createPieChartsPanel();
-
-
-    // 1. Get the complete chart panel (which now includes both chart and controls)
-        VBox revenueChartPanel = createRevenueChartPanel();
-
-   
-    // In your main dashboard setup:
-    VBox menuCategoryChart = createMenuCategoryChartPanel();
-    VBox riderOrdersChart = createRiderOrdersChartPanel();
-
-    // Add to your layout (example with SplitPane)
-    SplitPane chartsPane = new SplitPane();
-    chartsPane.getItems().addAll(menuCategoryChart, riderOrdersChart);
-    chartsPane.setDividerPositions(0.5); // 50-50 split
-
-        // In your main dashboard:
-    VBox riderDashboard = createRiderPerformanceDashboard();
-
-
-    ComboBox<String> customerTableFilter = new ComboBox<>();
-    customerTableFilter.getItems().addAll("Today", "This Week", "This Month", "All Time");
-    customerTableFilter.setValue("All Time");
-
-    VBox customerTableBox = new VBox(10);
-    GridPane customerTable = createLoyalCustomerTable("All Time");
-
-    customerTableFilter.setOnAction(e -> {
-        String selected = customerTableFilter.getValue();
-        customerTableBox.getChildren().set(1, createLoyalCustomerTable(selected));
-    });
-
-    customerTableBox.getChildren().addAll(customerTableFilter, customerTable);
-    
-    //RATINGS 
-        VBox ratingsView = createRatingsViewer();
-    
-    // Layout for the performance section
-    VBox performanceBox = new VBox(10, performanceTitle, generateReportButton, pieCharts, revenueChartPanel, 
-            chartsPane, riderDashboard, customerTableBox, ratingsView);
-    performanceBox.setPadding(new Insets(10));
-    
-    return performanceBox;
-}
 
 private ObservableList<PieChart.Data> getMostOrderedItemsData() {
     ObservableList<PieChart.Data> data = FXCollections.observableArrayList();
@@ -650,7 +1132,7 @@ public VBox createRevenueChartPanel() {
 
     // Create time range selector
     ComboBox<String> timeRangeComboBox = new ComboBox<>();
-    timeRangeComboBox.getItems().addAll("Today", "Weekly", "Monthly", "Yearly");
+    timeRangeComboBox.getItems().addAll("Today", "Daily", "Monthly", "Yearly");
     timeRangeComboBox.setValue("Today"); // Default selection
     timeRangeComboBox.setOnAction(e -> updateRevenueChart(timeRangeComboBox.getValue()));
     
@@ -710,7 +1192,7 @@ private String formatTimeLabel(String range, String rawValue) {
         case "Today":
             return "Today";
         case "Weekly":
-            return "Week " + rawValue;
+            return "Day " + rawValue;
         case "Monthly":
             // Convert month number to month name
             try {
@@ -728,7 +1210,7 @@ private String formatTimeLabel(String range, String rawValue) {
     switch (range) {
         case "Today":
             return "SELECT * FROM revenue_today";
-        case "Weekly":
+        case "Daily":
             return "SELECT * FROM revenue_weekly";
         case "Monthly":
             return "SELECT * FROM revenue_monthly";
@@ -865,7 +1347,7 @@ private VBox createRiderOrdersChartPanel() {
 
     // Create time period selector
     ComboBox<String> timePeriodCombo = new ComboBox<>();
-    timePeriodCombo.getItems().addAll("All Time", "This Year", "This Month", "This Week", "Today");
+    timePeriodCombo.getItems().addAll("All Time", "This Year", "This Month", "Today");
     timePeriodCombo.setValue("This Month");
     timePeriodCombo.setOnAction(e -> updateRiderOrdersChart(barChart, timePeriodCombo.getValue()));
 
@@ -1060,7 +1542,7 @@ private void addTableHeader(GridPane table, String text, int column) {
 }
 
 private void loadRiderPerformanceData(GridPane table) {
-    String query = "SELECT rider_id, name, average_rating, total_reviews, order_count, total_earnings, status " +
+    String query = "SELECT rider_id, name, average_rating, total_reviews, order_count, total_earnings, online_status " +
                    "FROM rider_performance_view " +
                    "ORDER BY order_count DESC";
 
@@ -1075,7 +1557,7 @@ private void loadRiderPerformanceData(GridPane table) {
             int reviews = rs.getInt("total_reviews");
             int orderCount = rs.getInt("order_count");
             double earnings = rs.getDouble("total_earnings");
-            String status = rs.getString("status");
+            String status = rs.getString("online_status");
 
             // Add data to table
             addTableRow(table, riderName, rating, reviews, orderCount, earnings, status, row);
@@ -1130,7 +1612,7 @@ private void addTableRow(GridPane table, String name, double rating, int reviews
 
 private String getStatusStyle(String status) {
     switch (status.toLowerCase()) {
-        case "available":
+        case "online":
             return "-fx-text-fill: #2ecc71; -fx-font-weight: bold; -fx-font-size: 14px;";
         case "offline":
             return "-fx-text-fill: #95a5a6; -fx-font-weight: bold; -fx-font-size: 14px;";
