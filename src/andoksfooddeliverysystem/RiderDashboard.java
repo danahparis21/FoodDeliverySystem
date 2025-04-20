@@ -25,6 +25,7 @@ import java.util.logging.Logger;
 import javafx.geometry.Pos;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -101,6 +102,8 @@ public class RiderDashboard extends Application {
         primaryStage.setHeight(800);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Andok's Rider Dashboard");
+        primaryStage.getIcons().add(new Image("file:src/icons/miniLogo.png"));
+
         primaryStage.show();
         
         showMainDashboard();

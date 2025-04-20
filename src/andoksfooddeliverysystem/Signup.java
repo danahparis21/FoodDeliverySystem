@@ -78,6 +78,7 @@ public class Signup extends Application {
         signUpStage.setTitle("Andok's Food Delivery - Sign Up");
         signUpStage.show();
         
+        
         // Apply animations
         applyEntranceAnimations(leftPanel, rightPanel);
     }

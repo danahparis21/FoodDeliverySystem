@@ -137,6 +137,8 @@ public class CustomerDashboard extends Application {
         
         primaryStage.setScene(scene);
         primaryStage.setTitle("Andok's - Customer Dashboard");
+        primaryStage.getIcons().add(new Image("file:src/icons/miniLogo.png"));
+
         primaryStage.show();
     }
     

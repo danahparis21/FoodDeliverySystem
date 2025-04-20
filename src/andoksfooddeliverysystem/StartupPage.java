@@ -98,6 +98,8 @@ public class StartupPage extends Application {
         primaryStage.setScene(scene);
         primaryStage.setTitle("Andok's Food Delivery");
         primaryStage.setMaximized(true);
+        primaryStage.getIcons().add(new Image("file:src/icons/miniLogo.png"));
+
         primaryStage.show();
         
         // Initialize scroll position for animations
@@ -128,8 +130,20 @@ public class StartupPage extends Application {
         mediaView.setEffect(new DropShadow(20, Color.color(0, 0, 0, 0.5)));
         
         // Semi-transparent overlay for better text visibility
+      
+        // Create a container for overlay so we don't directly hover on the overlay
+        StackPane overlayContainer = new StackPane();
+        overlayContainer.setPrefSize(1530, 800);
+
+        // The semi-transparent overlay
         Rectangle overlay = new Rectangle(1530, 800);
         overlay.setFill(Color.rgb(0, 0, 0, 0.3));
+
+        // Add the overlay to the container
+        overlayContainer.getChildren().add(overlay);
+
+      
+
         
         // Hero content container
         VBox heroContent = new VBox(20);
@@ -157,18 +171,38 @@ public class StartupPage extends Application {
         description.setWrappingWidth(600);
         description.setEffect(new DropShadow(5, Color.BLACK));
         
+        
+     
+
         // Order Now button with hover effect
         Button orderNowButton = createAnimatedButton("ORDER NOW", PRIMARY_COLOR, DARK_COLOR);
+         // Hover effect to hide overlay + texts when hovering on the button
+        orderNowButton.setOnMouseEntered(e -> {
+            overlay.setOpacity(0);
+            tagline.setOpacity(0);
+            description.setOpacity(0);
+            logo.setOpacity(0); // optional
+        });
+
+        orderNowButton.setOnMouseExited(e -> {
+            overlay.setOpacity(1);
+            tagline.setOpacity(1);
+            description.setOpacity(1);
+            logo.setOpacity(1); // optional
+        });
+
         orderNowButton.setOnAction(e -> {
             Stage loginStage = new Stage();
             new Main().showLogin(loginStage);
         });
         
+      
+
         // Add all elements to hero content
         heroContent.getChildren().addAll(logo, tagline, description, orderNowButton);
         
         // Add all layers to hero section
-        heroSection.getChildren().addAll(mediaView, overlay, heroContent);
+        heroSection.getChildren().addAll(mediaView, overlayContainer, heroContent);
         
         return heroSection;
     }

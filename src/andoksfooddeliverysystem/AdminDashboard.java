@@ -120,6 +120,8 @@ public class AdminDashboard extends Application {
         primaryStage.setHeight(800);
         primaryStage.setScene(scene);
         primaryStage.setTitle("Andok's Admin Dashboard");
+        primaryStage.getIcons().add(new Image("file:src/icons/miniLogo.png"));
+
         primaryStage.show();
         
         // Show admin dashboard immediately on load
