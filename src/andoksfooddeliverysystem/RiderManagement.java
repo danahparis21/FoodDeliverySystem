@@ -61,7 +61,10 @@ public class RiderManagement {
     private static final String TEXT_DARK = "#212121";  
     private static TextField nameField = new TextField();
     private static TextField contactField = new TextField();
-       private static ImageView riderImageView = new ImageView();
+    private static ImageView riderImageView = new ImageView();
+    private static Button deleteButton = new Button("Delete");
+    private static TableView<RidersList> tableView = new TableView<>();
+    private static ObservableList<RidersList> riderData = FXCollections.observableArrayList();
 
     public RiderManagement(int adminId) {
         this.adminId = adminId;
@@ -101,6 +104,44 @@ public class RiderManagement {
         // Add components to main layout
         mainContent.getChildren().addAll(formPane, tableSection);
         HBox.setHgrow(tableSection, Priority.ALWAYS);
+        
+        deleteButton.setOnAction(event -> {
+         RiderManagement.RidersList selectedItem = tableView.getSelectionModel().getSelectedItem();
+         if (selectedItem == null) {
+             System.out.println("❌ No item selected for deletion.");
+             return;
+         }
+
+    // Confirm before deleting
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Are you sure you want to delete this rider?", ButtonType.YES, ButtonType.NO);
+        alert.setTitle("Confirm Deletion");
+        Optional<ButtonType> result = alert.showAndWait();
+
+        if (result.isPresent() && result.get() == ButtonType.YES) {
+            try (Connection conn = Database.connect()) {
+                String sql = "DELETE FROM riders WHERE name = ?";
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                stmt.setString(1, selectedItem.getName());
+                stmt.executeUpdate();
+
+                // Remove image file (optional)
+                if (selectedItem.getImagePath() != null) {
+                    File imageFile = new File(selectedItem.getImagePath());
+                    if (imageFile.exists()) {
+                        imageFile.delete();
+                        System.out.println("🗑️ Image deleted: " + selectedItem.getImagePath());
+                    }
+                }
+
+                // Remove item from the table
+                riderData.remove(selectedItem);
+                System.out.println("✅ Rider deleted successfully!");
+
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        }
+    });
         
         root.getChildren().addAll(header, mainContent);
     }
@@ -183,7 +224,7 @@ public class RiderManagement {
                           "-fx-font-weight: bold; " +
                           "-fx-background-radius: 4px;");
         
-        Button deleteButton = new Button("Delete");
+      
         deleteButton.setPrefHeight(40);
         deleteButton.setPrefWidth(110);
         deleteButton.setStyle("-fx-background-color: transparent; " +
@@ -349,7 +390,7 @@ public class RiderManagement {
         searchBar.getChildren().addAll(searchField, categoryFilter, sortAZ, sortZA);
         
         // Table view creation
-        TableView<RidersList> tableView = new TableView<>();
+     
         tableView.setPrefWidth(600);
         tableView.setStyle("-fx-background-radius: 4px; " +
                          "-fx-border-color: #DDDDDD; " +
@@ -359,6 +400,7 @@ public class RiderManagement {
         TableColumn<RidersList, String> nameColumn = new TableColumn<>("Rider Name");
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         nameColumn.setPrefWidth(120);
+        
         
         TableColumn<RidersList, String> contactColumn = new TableColumn<>("Contact");
         contactColumn.setCellValueFactory(new PropertyValueFactory<>("contact"));
@@ -396,9 +438,12 @@ public class RiderManagement {
                 editButton.setOnAction(event -> {
                     RidersList rider = getTableView().getItems().get(getIndex());
 
+                    tableView.getSelectionModel().select(rider); // 🔥 Mark it as selected
+
                     // Example: Populate fields from rider data
                     nameField.setText(rider.getName());
                     contactField.setText(rider.getContact());
+                    
                   
 
                     // Load image
@@ -465,10 +510,14 @@ public class RiderManagement {
             }
         });
         
+        tableView.getColumns().clear(); // 💥 clear to prevent duplication!
+
+    tableView.setItems(riderData);  // Assuming riderData is a list of your rows
+
         tableView.getColumns().addAll(nameColumn, contactColumn, imageColumn, statusColumn, onlineStatusColumn, actionsColumn);
-        
+
         // Data setup
-        ObservableList<RidersList> riderData = FXCollections.observableArrayList();
+      
         FilteredList<RidersList> filteredData = new FilteredList<>(riderData, p -> true);
         
         // Update filter logic
@@ -501,12 +550,16 @@ public class RiderManagement {
         // Load data from database
         loadRiderData(riderData);
         
+         
+        
         // Table selection event
         setupTableSelectionEvent(tableView);
+        
         
         // Add components to table section
         tableSection.getChildren().addAll(searchBar, tableView);
         VBox.setVgrow(tableView, Priority.ALWAYS);
+        
         
         return tableSection;
     }
