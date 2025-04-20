@@ -37,6 +37,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.DialogPane;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
@@ -882,14 +883,27 @@ private void updateStoreStatus(String newStatus) throws MessagingException {
 }
 
 
-    private void showInfo(String message) {
-    Alert info = new Alert(Alert.AlertType.INFORMATION);
-    info.setTitle("Notification");
-    info.setHeaderText(null);
-    info.setContentText(message);
-    info.showAndWait();
+ private static void showInfo(String message) {
+    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+    alert.setTitle("Notification"); // Optional: can also be removed or replaced
+    alert.setHeaderText(null);
+    alert.setContentText(message);
+
+    // Apply custom styling to the alert
+    DialogPane dialogPane = alert.getDialogPane();
+    dialogPane.setStyle("-fx-background-color: white;");
+
+    // Apply a default button style (e.g., yellow with dark text)
+    dialogPane.getButtonTypes().stream()
+        .map(dialogPane::lookupButton)
+        .forEach(button -> {
+            button.setStyle("-fx-background-color: #FFCC00; -fx-text-fill: #333333;");
+        });
+
+    alert.showAndWait();
 }
 
+  
     
 private void loadTodayStats() {
     // Today's stats
