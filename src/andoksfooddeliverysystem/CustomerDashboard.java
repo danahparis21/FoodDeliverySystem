@@ -30,6 +30,7 @@ import javafx.animation.FadeTransition;
 import javafx.animation.ScaleTransition;
 import javafx.scene.Cursor;
 import javafx.scene.Node;
+import javafx.scene.effect.BlurType;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.ImagePattern;
@@ -37,9 +38,17 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Popup;
 import javafx.stage.PopupWindow;
+import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import javafx.util.Duration;
 import org.kordamp.ikonli.javafx.FontIcon;
+import javafx.animation.*;
+import javafx.scene.shape.Circle;
+import javafx.scene.effect.DropShadow;
+import javafx.scene.effect.BlurType;
+import javafx.scene.paint.Color;
+import javafx.stage.StageStyle;
+import javafx.util.Duration;
 
 public class CustomerDashboard extends Application {
     private int userID;
@@ -941,26 +950,292 @@ private void styleAlert(Alert alert) {
 
 
     private void showStoreClosedWindow() {
-    Stage closedStage = new Stage();
-    closedStage.setTitle("Store Closed");
+        Stage closedStage = new Stage();
+        closedStage.setTitle("Andok's - Store Closed");
+        closedStage.initStyle(StageStyle.UNDECORATED); // Remove default window decorations
 
-    VBox layout = new VBox(20);
-    layout.setPadding(new Insets(30));
-    layout.setAlignment(Pos.CENTER);
+        // Main container
+        BorderPane mainLayout = new BorderPane();
 
-    Label message = new Label("🚫 Store is currently closed!");
-    message.setFont(Font.font("Arial", FontWeight.BOLD, 16));
+        // Top header with store branding
+        HBox header = new HBox();
+        header.setStyle("-fx-background-color: #E60000; -fx-padding: 15px;");
+        header.setPrefHeight(70);
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.setOpacity(0); // Start with 0 opacity for animation
+
+        // Store logo - replace path with your actual logo or use text
+        Label logoText = new Label("ANDOK'S");
+        logoText.setStyle("-fx-font-family: 'Arial Black'; -fx-font-size: 24px; -fx-text-fill: white; -fx-font-weight: bold;");
+
+        // Add close button
+        Button closeButton = new Button("✕");
+        closeButton.setStyle("-fx-background-color: transparent; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px;");
+        closeButton.setOnAction(e -> {
+        // Create closing animation
+        ScaleTransition scaleOut = new ScaleTransition(Duration.millis(200), mainLayout);
+        scaleOut.setFromX(1.0);
+        scaleOut.setFromY(1.0);
+        scaleOut.setToX(0.8);
+        scaleOut.setToY(0.8);
+        
+        FadeTransition fadeOut = new FadeTransition(Duration.millis(200), mainLayout);
+        fadeOut.setFromValue(1.0);
+        fadeOut.setToValue(0.0);
+        
+        ParallelTransition closeTransition = new ParallelTransition(scaleOut, fadeOut);
+        closeTransition.setOnFinished(event -> closedStage.close());
+        closeTransition.play();
+    });
     
-    Label note = new Label("We will notify you once the store is open again. Please check back later!");
+    Region spacer = new Region();
+    HBox.setHgrow(spacer, Priority.ALWAYS);
+    
+    header.getChildren().addAll(logoText, spacer, closeButton);
+    
+    // Center content area
+    VBox contentArea = new VBox(20);
+    contentArea.setAlignment(Pos.CENTER);
+    contentArea.setPadding(new Insets(30, 40, 30, 40));
+    contentArea.setStyle("-fx-background-color: white;");
+    contentArea.setOpacity(0); // Start with 0 opacity for animation
+    
+    // Store closed icon
+    StackPane iconContainer = new StackPane();
+    Circle circle = new Circle(0); // Start with 0 radius for animation
+    circle.setFill(Color.web("#FFCC00")); // Yellow
+    
+    FontIcon storeIcon = new FontIcon(); // Requires FontAwesomeFX library
+    storeIcon.setIconLiteral("fas-store-slash");
+    storeIcon.setIconSize(50);
+    storeIcon.setIconColor(Color.web("#941c1e")); // Red
+    storeIcon.setOpacity(0); // Start with 0 opacity for animation
+    
+    iconContainer.getChildren().addAll(circle, storeIcon);
+    
+    // Alternative without FontAwesomeFX
+    /*
+    Text storeIcon = new Text("🚫");
+    storeIcon.setFont(Font.font("Arial", FontWeight.BOLD, 50));
+    storeIcon.setFill(Color.web("#FF0000"));
+    storeIcon.setOpacity(0); // Start with 0 opacity for animation
+    iconContainer.getChildren().addAll(circle, storeIcon);
+    */
+    
+    // Message text
+    Label message = new Label("STORE IS CURRENTLY CLOSED");
+    message.setStyle("-fx-font-family: 'Arial'; -fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #FF0000;");
+    message.setOpacity(0); // Start with 0 opacity for animation
+    
+    // Note text
+    Label note = new Label("We will notify you once the store is open again.\nPlease check back later!");
+    note.setStyle("-fx-font-family: 'Arial'; -fx-font-size: 14px; -fx-text-fill: #333333; -fx-text-alignment: center;");
     note.setWrapText(true);
     note.setTextAlignment(TextAlignment.CENTER);
+    note.setOpacity(0); // Start with 0 opacity for animation
+    
+    // Button to check status
+    Button checkStatusButton = new Button("OKAY");
+    checkStatusButton.setPrefWidth(200);
+    checkStatusButton.setPrefHeight(40);
+    checkStatusButton.setStyle("-fx-background-color: #941c1e; -fx-text-fill: white; -fx-font-weight: bold; " +
+                             "-fx-font-size: 14px; -fx-background-radius: 20px;");
+    checkStatusButton.setOpacity(0); // Start with 0 opacity for animation
+    
+    // Button hover animation
+    checkStatusButton.setOnMouseEntered(e -> {
+        ScaleTransition buttonGrow = new ScaleTransition(Duration.millis(100), checkStatusButton);
+        buttonGrow.setToX(1.05);
+        buttonGrow.setToY(1.05);
+        buttonGrow.play();
+        
+        checkStatusButton.setStyle("-fx-background-color: #E60000; -fx-text-fill: white; -fx-font-weight: bold; " +
+                                 "-fx-font-size: 14px; -fx-background-radius: 20px;");
+    });
+    
+    checkStatusButton.setOnMouseExited(e -> {
+        ScaleTransition buttonShrink = new ScaleTransition(Duration.millis(100), checkStatusButton);
+        buttonShrink.setToX(1.0);
+        buttonShrink.setToY(1.0);
+        buttonShrink.play();
+        
+        checkStatusButton.setStyle("-fx-background-color: #941c1e; -fx-text-fill: white; -fx-font-weight: bold; " +
+                                 "-fx-font-size: 14px; -fx-background-radius: 20px;");
+    });
+    
+        checkStatusButton.setOnAction(e -> {
+         // Create a subtle button press effect
+         ScaleTransition buttonPress = new ScaleTransition(Duration.millis(100), checkStatusButton);
+         buttonPress.setToX(0.95);
+         buttonPress.setToY(0.95);
 
-    layout.getChildren().addAll(message, note);
+         ScaleTransition buttonRelease = new ScaleTransition(Duration.millis(100), checkStatusButton);
+         buttonRelease.setToX(1.0);
+         buttonRelease.setToY(1.0);
+         buttonRelease.setDelay(Duration.millis(100));
 
-    Scene scene = new Scene(layout, 400, 200);
+         // Fade out the window
+         FadeTransition fadeOut = new FadeTransition(Duration.millis(300), mainLayout);
+         fadeOut.setFromValue(1.0);
+         fadeOut.setToValue(0.0);
+         fadeOut.setDelay(Duration.millis(200));
+
+         // Combine animations in sequence
+         SequentialTransition checkTransition = new SequentialTransition(
+             buttonPress, 
+             buttonRelease, 
+             fadeOut
+         );
+
+         checkTransition.setOnFinished(event -> {
+             closedStage.close();
+             // Add your logic to check store status again
+         });
+
+         checkTransition.play();
+     });
+    // Add elements to content area
+    contentArea.getChildren().addAll(iconContainer, message, note, checkStatusButton);
+    
+    // Bottom strip with yellow accent
+    HBox footer = new HBox();
+    footer.setPrefHeight(15);
+    footer.setStyle("-fx-background-color: #FFCC00;"); // Yellow
+    footer.setOpacity(0); // Start with 0 opacity for animation
+    
+    // Add all sections to main layout
+    mainLayout.setTop(header);
+    mainLayout.setCenter(contentArea);
+    mainLayout.setBottom(footer);
+    
+    // Add drop shadow effect to the window
+    mainLayout.setEffect(new DropShadow(BlurType.GAUSSIAN, Color.rgb(0, 0, 0, 0.3), 10, 0.5, 0.0, 0.0));
+    
+    // Create scene with initial scale for animation
+    Scene scene = new Scene(mainLayout, 450, 500);
+    
+    // Add CSS for smooth transitions
+    scene.getRoot().setStyle("-fx-background-color: transparent;");
+    mainLayout.setScaleX(0.8);
+    mainLayout.setScaleY(0.8);
+    
+    // Add dragging capability since we're using undecorated window
+    final Delta dragDelta = new Delta();
+    scene.setOnMousePressed(mouseEvent -> {
+        dragDelta.x = closedStage.getX() - mouseEvent.getScreenX();
+        dragDelta.y = closedStage.getY() - mouseEvent.getScreenY();
+    });
+    scene.setOnMouseDragged(mouseEvent -> {
+        closedStage.setX(mouseEvent.getScreenX() + dragDelta.x);
+        closedStage.setY(mouseEvent.getScreenY() + dragDelta.y);
+    });
+    
+    // Apply scene to stage
     closedStage.setScene(scene);
     closedStage.show();
+    
+    // Create entrance animations
+    
+    // 1. Whole window animation
+    ScaleTransition scaleIn = new ScaleTransition(Duration.millis(300), mainLayout);
+    scaleIn.setFromX(0.8);
+    scaleIn.setFromY(0.8);
+    scaleIn.setToX(1.0);
+    scaleIn.setToY(1.0);
+    scaleIn.setInterpolator(Interpolator.EASE_OUT);
+    
+    // 2. Header fade in
+    FadeTransition headerFade = new FadeTransition(Duration.millis(400), header);
+    headerFade.setFromValue(0.0);
+    headerFade.setToValue(1.0);
+    headerFade.setDelay(Duration.millis(200));
+    
+    // 3. Content fade in
+    FadeTransition contentFade = new FadeTransition(Duration.millis(400), contentArea);
+    contentFade.setFromValue(0.0);
+    contentFade.setToValue(1.0);
+    contentFade.setDelay(Duration.millis(300));
+    
+    // 4. Footer fade in
+    FadeTransition footerFade = new FadeTransition(Duration.millis(400), footer);
+    footerFade.setFromValue(0.0);
+    footerFade.setToValue(1.0);
+    footerFade.setDelay(Duration.millis(200));
+    
+    // 5. Circle animation
+    Timeline circleGrow = new Timeline(
+        new KeyFrame(Duration.ZERO, new KeyValue(circle.radiusProperty(), 0)),
+        new KeyFrame(Duration.millis(600), new KeyValue(circle.radiusProperty(), 50, Interpolator.EASE_OUT))
+    );
+    circleGrow.setDelay(Duration.millis(400));
+    
+    // 6. Icon fade in
+    FadeTransition iconFade = new FadeTransition(Duration.millis(400), storeIcon);
+    iconFade.setFromValue(0.0);
+    iconFade.setToValue(1.0);
+    iconFade.setDelay(Duration.millis(700));
+    
+    // 7. Message fade in with slight bounce
+    TranslateTransition messageMove = new TranslateTransition(Duration.millis(500), message);
+    messageMove.setFromY(20);
+    messageMove.setToY(0);
+    messageMove.setInterpolator(Interpolator.EASE_OUT);
+    messageMove.setDelay(Duration.millis(800));
+    
+    FadeTransition messageFade = new FadeTransition(Duration.millis(500), message);
+    messageFade.setFromValue(0.0);
+    messageFade.setToValue(1.0);
+    messageFade.setDelay(Duration.millis(800));
+    
+    // 8. Note fade in
+    TranslateTransition noteMove = new TranslateTransition(Duration.millis(500), note);
+    noteMove.setFromY(20);
+    noteMove.setToY(0);
+    noteMove.setInterpolator(Interpolator.EASE_OUT);
+    noteMove.setDelay(Duration.millis(900));
+    
+    FadeTransition noteFade = new FadeTransition(Duration.millis(500), note);
+    noteFade.setFromValue(0.0);
+    noteFade.setToValue(1.0);
+    noteFade.setDelay(Duration.millis(900));
+    
+    // 9. Button animation with bounce
+    TranslateTransition buttonMove = new TranslateTransition(Duration.millis(600), checkStatusButton);
+    buttonMove.setFromY(30);
+    buttonMove.setToY(0);
+    buttonMove.setInterpolator(Interpolator.SPLINE(0.215, 0.610, 0.355, 1.000));
+    buttonMove.setDelay(Duration.millis(1000));
+    
+    FadeTransition buttonFade = new FadeTransition(Duration.millis(600), checkStatusButton);
+    buttonFade.setFromValue(0.0);
+    buttonFade.setToValue(1.0);
+    buttonFade.setDelay(Duration.millis(1000));
+    
+    // Pulse animation for the button to draw attention
+    Timeline buttonPulse = new Timeline(
+        new KeyFrame(Duration.ZERO, new KeyValue(checkStatusButton.scaleXProperty(), 1.0)),
+        new KeyFrame(Duration.ZERO, new KeyValue(checkStatusButton.scaleYProperty(), 1.0)),
+        new KeyFrame(Duration.millis(600), new KeyValue(checkStatusButton.scaleXProperty(), 1.07)),
+        new KeyFrame(Duration.millis(600), new KeyValue(checkStatusButton.scaleYProperty(), 1.07)),
+        new KeyFrame(Duration.millis(1200), new KeyValue(checkStatusButton.scaleXProperty(), 1.0)),
+        new KeyFrame(Duration.millis(1200), new KeyValue(checkStatusButton.scaleYProperty(), 1.0))
+    );
+    buttonPulse.setDelay(Duration.millis(1500));
+    buttonPulse.setCycleCount(2);
+    
+    // Play all animations together
+    ParallelTransition parallelTransition = new ParallelTransition(
+        scaleIn, headerFade, contentFade, footerFade, circleGrow, iconFade,
+        messageMove, messageFade, noteMove, noteFade, buttonMove, buttonFade, buttonPulse
+    );
+    parallelTransition.play();
 }
+
+// Helper class for window dragging
+private static class Delta {
+    double x, y;
+}
+
 
 
    
