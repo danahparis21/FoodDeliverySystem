@@ -515,7 +515,7 @@ public class RiderManagement {
         
         tableView.getColumns().clear(); // 💥 clear to prevent duplication!
 
-    tableView.setItems(riderData);  // Assuming riderData is a list of your rows
+        tableView.setItems(riderData);  // Assuming riderData is a list of your rows
 
         tableView.getColumns().addAll(nameColumn, contactColumn, imageColumn, statusColumn, onlineStatusColumn, actionsColumn);
 
@@ -551,6 +551,7 @@ public class RiderManagement {
         });
         
         // Load data from database
+        riderData.clear(); // 🚫 Prevents duplication
         loadRiderData(riderData);
         
          
