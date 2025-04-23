@@ -432,7 +432,10 @@ public class Main extends Application {
             } catch (MessagingException ex) {
                 Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
             }
+            
         });
+        
+        
         
         // Sign up text
         HBox signUpContainer = new HBox();

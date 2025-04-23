@@ -239,16 +239,16 @@ public class ShowRiderDashboard {
         // Create card for all orders
         VBox allOrders = createStatsCard("Total Orders", allOrdersLabel, "shopping-bag");
         
-        // Create income card (placeholder)
-        Label incomeLabel = new Label("$0.00");
-        incomeLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + DARK_TEXT + ";");
-        VBox income = createStatsCard("Today's Income", incomeLabel, "dollar-sign");
-        
-        // Create performance score card (placeholder)
-        Label scoreLabel = new Label("0%");
-        scoreLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + DARK_TEXT + ";");
-        VBox performanceScore = createStatsCard("Performance Score", scoreLabel, "chart-line");
-        
+//        // Create income card (placeholder)
+//        Label incomeLabel = new Label("$0.00");
+//        incomeLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + DARK_TEXT + ";");
+//        VBox income = createStatsCard("Today's Income", incomeLabel, "dollar-sign");
+//        
+//        // Create performance score card (placeholder)
+//        Label scoreLabel = new Label("0%");
+//        scoreLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: " + DARK_TEXT + ";");
+//        VBox performanceScore = createStatsCard("Performance Score", scoreLabel, "chart-line");
+//        
         // Arrange cards in 2x2 grid
         GridPane statsGrid = new GridPane();
         statsGrid.setHgap(15);
@@ -256,8 +256,8 @@ public class ShowRiderDashboard {
         
         statsGrid.add(ordersToday, 0, 0);
         statsGrid.add(allOrders, 1, 0);
-        statsGrid.add(income, 0, 1);
-        statsGrid.add(performanceScore, 1, 1);
+//        statsGrid.add(income, 0, 1);
+//        statsGrid.add(performanceScore, 1, 1);
         
         // Set column constraints to make cards equal width
         ColumnConstraints col1 = new ColumnConstraints();
@@ -475,14 +475,15 @@ private static void showInfoMessage(String message) {
 
 
  private void loadTodayStats(int riderId) {
-    String todayQuery = """
+   String todayQuery = """
         SELECT 
             SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) AS completed,
-            SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) AS pending,
+            SUM(CASE WHEN status = 'Out For Delivery' THEN 1 ELSE 0 END) AS out_for_delivery,
             SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) AS cancelled
         FROM orders
         WHERE DATE(order_date) = CURDATE() AND rider_id = ?
     """;
+
 
     String allTimeQuery = """
         SELECT 
@@ -498,13 +499,14 @@ private static void showInfoMessage(String message) {
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     int completed = rs.getInt("completed");
-                    int pending = rs.getInt("pending");
+                    int outForDelivery = rs.getInt("out_for_delivery");
+
                     int cancelled = rs.getInt("cancelled");
 
                     ordersTodayLabel.setText("Today's Orders: " +
-                            (completed + pending + cancelled) + " (" +
+                            (completed + outForDelivery + cancelled) + " (" +
                             completed + " Completed, " +
-                            pending + " Pending, " +
+                            outForDelivery + "For Delivery, " +
                             cancelled + " Cancelled)");
                 }
             }
@@ -658,8 +660,8 @@ private String formatTimeLabel(String range, String rawValue) {
     switch (range) {
         case "Today":
             return "Today";
-        case "Weekly":
-            return "Week " + rawValue;
+        case "Daily":
+            return "Day " + rawValue;
         case "Monthly":
             // Convert month number to month name
             try {
@@ -678,7 +680,7 @@ private String buildRevenueQuery(String range) {
   switch (range) {
         case "Today":
             return "SELECT * FROM rider_earnings_today_view WHERE rider_id = ?;";
-        case "Weekly":
+        case "Daily":
             return "SELECT * FROM rider_earnings_weekly_view WHERE rider_id = ?;";
         case "Monthly":
             return "SELECT * FROM rider_earnings_monthly_view WHERE rider_id = ?;";

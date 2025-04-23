@@ -1717,7 +1717,9 @@ private VBox createRatingsViewer() {
     filterBox.setAlignment(Pos.CENTER_LEFT);
     
     ComboBox<String> ratingTypeFilter = new ComboBox<>();
-    ratingTypeFilter.getItems().addAll("All Ratings", "Food Only", "Delivery Only");
+    ratingTypeFilter.getItems().addAll(
+      "All Ratings", "5 Stars", "4 Stars", "3 Stars", "2 Stars", "1 Star"
+  );
     ratingTypeFilter.setValue("All Ratings");
     
     ComboBox<String> timeFilter = new ComboBox<>();
@@ -1725,7 +1727,7 @@ private VBox createRatingsViewer() {
     timeFilter.setValue("All Time");
     
     filterBox.getChildren().addAll(
-        new Label("Show:"), ratingTypeFilter,
+        new Label("Type:"), ratingTypeFilter,
         new Label("From:"), timeFilter
     );
     
@@ -1735,18 +1737,19 @@ private VBox createRatingsViewer() {
     // Load initial data
     updateRatingsTable(ratingsTable, "All Ratings", "All Time");
     
-    // Set up filter actions
-    ratingTypeFilter.setOnAction(e -> updateRatingsTable(
-        ratingsTable, 
-        ratingTypeFilter.getValue(), 
+   
+        ratingTypeFilter.setOnAction(e -> updateRatingsTable(
+        ratingsTable,
+        ratingTypeFilter.getValue(),
         timeFilter.getValue()
     ));
-    
+
     timeFilter.setOnAction(e -> updateRatingsTable(
-        ratingsTable, 
-        ratingTypeFilter.getValue(), 
+        ratingsTable,
+        ratingTypeFilter.getValue(),
         timeFilter.getValue()
     ));
+
     
     // Put table in scrollable container
     ScrollPane scrollPane = new ScrollPane(ratingsTable);
@@ -1870,13 +1873,12 @@ private String buildRatingsQuery(String ratingType, String timePeriod) {
         WHERE 1=1
     """);
     
-    // Add rating type filter
+    // Add rating amount filter
     if (!ratingType.equals("All Ratings")) {
-        if (ratingType.equals("Food Only")) {
-            query.append(" AND food_rating > 0");
-        } else if (ratingType.equals("Delivery Only")) {
-            query.append(" AND delivery_rating > 0");
-        }
+        // Extract the number from "5 Stars" -> 5
+        int starValue = Integer.parseInt(ratingType.substring(0, 1));
+        query.append(" AND (food_rating = ").append(starValue)
+             .append(" OR delivery_rating = ").append(starValue).append(")");
     }
     
     // Add time period filter
