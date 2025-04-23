@@ -1,0 +1,17 @@
+/* CSS file: /styles/modern-dialog.css */
+
+.dialog-pane {
+  -fx-background-color: white;
+  -fx-border-color: #c81d24;
+  -fx-border-width: 1px;
+}
+
+.dialog-pane .button {
+  -fx-background-radius: 4px;
+  -fx-padding: 8px 16px;
+  -fx-cursor: hand;
+}
+
+.dialog-pane .button:hover {
+  -fx-effect: dropshadow(three-pass-box, rgba(0, 0, 0, 0.2), 2, 0, 0, 1);
+}

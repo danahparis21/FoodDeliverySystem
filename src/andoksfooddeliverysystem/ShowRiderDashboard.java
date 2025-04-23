@@ -318,17 +318,22 @@ public class ShowRiderDashboard {
         
         // Create time filter for ratings
         Label filterLabel = new Label("Filter by:");
-        filterLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: " + LIGHT_TEXT + ";");
+        filterLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: " + DARK_TEXT + ";");
         
         ComboBox<String> timeRangeComboBox = new ComboBox<>();
         timeRangeComboBox.getItems().addAll("All Time", "Today", "This Week", "This Month");
         timeRangeComboBox.setValue("All Time");
-        timeRangeComboBox.setStyle("-fx-background-color: " + WHITE + "; -fx-border-color: " + MEDIUM_GRAY + ";" +
-                "-fx-border-radius: 4; -fx-background-radius: 4;");
+          timeRangeComboBox.setStyle(
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-border-color: " + MEDIUM_GRAY + ";" +
+            "-fx-border-radius: 3px;" +
+            "-fx-padding: 5px;"
+        );
         
         HBox filterBox = new HBox(10);
         filterBox.setAlignment(Pos.CENTER_LEFT);
         filterBox.getChildren().addAll(filterLabel, timeRangeComboBox);
+        
         
         // Create ratings table
         TableView<Rating> ratingsTable = createRatingsTable();
@@ -478,7 +483,7 @@ private static void showInfoMessage(String message) {
    String todayQuery = """
         SELECT 
             SUM(CASE WHEN status = 'Completed' THEN 1 ELSE 0 END) AS completed,
-            SUM(CASE WHEN status = 'Out For Delivery' THEN 1 ELSE 0 END) AS out_for_delivery,
+            SUM(CASE WHEN status = 'Out for Delivery' THEN 1 ELSE 0 END) AS out_for_delivery,
             SUM(CASE WHEN status = 'Cancelled' THEN 1 ELSE 0 END) AS cancelled
         FROM orders
         WHERE DATE(order_date) = CURDATE() AND rider_id = ?
@@ -506,7 +511,7 @@ private static void showInfoMessage(String message) {
                     ordersTodayLabel.setText("Today's Orders: " +
                             (completed + outForDelivery + cancelled) + " (" +
                             completed + " Completed, " +
-                            outForDelivery + "For Delivery, " +
+                            outForDelivery + " For Delivery, " +
                             cancelled + " Cancelled)");
                 }
             }
@@ -580,7 +585,12 @@ yAxis.setStyle("-fx-tick-label-fill: black;");
     timeRangeComboBox.setValue("Today");
     timeRangeComboBox.setOnAction(e -> updateRevenueChart(timeRangeComboBox.getValue(), riderId));
     timeRangeComboBox.setStyle("-fx-font-size: 14px; -fx-pref-width: 150px;");
-
+      timeRangeComboBox.setStyle(
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-border-color: " + MEDIUM_GRAY + ";" +
+            "-fx-border-radius: 3px;" +
+            "-fx-padding: 5px;"
+        );
     // Control panel
     HBox controlPanel = new HBox(10, new Label("Time Range:"), timeRangeComboBox);
     controlPanel.setAlignment(Pos.CENTER_LEFT);

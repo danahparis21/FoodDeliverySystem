@@ -37,6 +37,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
@@ -57,14 +58,17 @@ import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.image.Image;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 import javax.mail.MessagingException;
+import org.kordamp.ikonli.javafx.FontIcon;
 
 
 
@@ -691,46 +695,99 @@ public class ShowAdminDashboard {
 }
 
 
-  private void loadStoreStatus() throws MessagingException {
+ 
+private void loadStoreStatus() throws MessagingException {
     String query = "SELECT store_status FROM store WHERE store_id = 1";
-
     try (Connection conn = Database.connect();
          PreparedStatement stmt = conn.prepareStatement(query);
          ResultSet rs = stmt.executeQuery()) {
-
+        
         if (rs.next()) {
             String status = rs.getString("store_status");
             storeStatusLabel.setText("Store is currently: " + status);
             toggleShopButton.setText(status.equalsIgnoreCase("Open") ? "Close Shop" : "Open Shop");
-
             System.out.println("✅ Store status loaded: " + status);
-
-            // If store is closed at login, show dialog
+            
+            // If store is closed at login, show custom dialog
             if (status.equalsIgnoreCase("Close")) {
-                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-                alert.setTitle("Store is Closed");
-                alert.setHeaderText("Store is closed.");
-                alert.setContentText("Would you like to open and start operations?");
-
-                ButtonType openButton = new ButtonType("Open Store");
-                ButtonType laterButton = new ButtonType("Later", ButtonBar.ButtonData.CANCEL_CLOSE);
-
-                alert.getButtonTypes().setAll(openButton, laterButton);
-                Optional<ButtonType> result = alert.showAndWait();
-
-                if (result.isPresent() && result.get() == openButton) {
-                    updateStoreStatus("Open");
-                    showInfo("Andok's is now OPEN! You will start receiving orders!");
-                }
+                createModernAlert(status);
             }
-
         } else {
             System.out.println("⚠️ No store data found!");
         }
-
     } catch (SQLException e) {
         e.printStackTrace();
         storeStatusLabel.setText("❌ Error loading store status");
+    }
+}
+
+/**
+ * Creates a modern styled red and white alert dialog
+ */
+private void createModernAlert(String status) throws MessagingException {
+    // Create custom dialog
+    Dialog<ButtonType> dialog = new Dialog<>();
+    dialog.setTitle("Store Status");
+    
+    // Set dialog icon (optional - you can replace with your own icon)
+    Stage stage = (Stage) dialog.getDialogPane().getScene().getWindow();
+    stage.getIcons().add(new Image(getClass().getResourceAsStream("/icons/store_open.png")));
+    
+    // Create custom header with icon and text
+    HBox header = new HBox(10);
+    header.setAlignment(Pos.CENTER_LEFT);
+    header.setPadding(new Insets(10, 10, 10, 10));
+    header.setStyle("-fx-background-color: #C81D24;");
+    
+    // Create icon for alert
+    FontIcon icon = new FontIcon();
+    icon.setIconLiteral("fas-store-slash");
+    icon.setIconSize(32);
+    icon.setIconColor(Color.WHITE);
+    
+    // Create header text
+    Label headerLabel = new Label("STORE IS CLOSED");
+    headerLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: white;");
+    
+    header.getChildren().addAll(icon, headerLabel);
+    
+    // Create content area
+    VBox content = new VBox(15);
+    content.setPadding(new Insets(20, 20, 10, 20));
+    content.setStyle("-fx-background-color: white;");
+    
+    Label messageLabel = new Label("The store is currently closed. Would you like to open and start operations?");
+    messageLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #333333;");
+    messageLabel.setWrapText(true);
+    
+    content.getChildren().add(messageLabel);
+    
+    // Combine header and content
+    VBox dialogContent = new VBox();
+    dialogContent.getChildren().addAll(header, content);
+    
+    // Set up dialog pane
+    DialogPane dialogPane = dialog.getDialogPane();
+    dialogPane.setContent(dialogContent);
+    dialogPane.getStylesheets().add(getClass().getResource("/styles/modern_dialog.css").toExternalForm());
+    
+    // Add buttons
+    ButtonType openButton = new ButtonType("OPEN STORE", ButtonBar.ButtonData.OK_DONE);
+    ButtonType laterButton = new ButtonType("LATER", ButtonBar.ButtonData.CANCEL_CLOSE);
+    dialogPane.getButtonTypes().addAll(openButton, laterButton);
+    
+    // Style buttons
+    Button openBtn = (Button) dialogPane.lookupButton(openButton);
+    openBtn.setStyle("-fx-background-color: #C81D24; -fx-text-fill: white; -fx-font-weight: bold;");
+    
+    Button laterBtn = (Button) dialogPane.lookupButton(laterButton);
+    laterBtn.setStyle("-fx-background-color: #f8f8f8; -fx-text-fill: #333333;");
+    
+    // Handle result
+    Optional<ButtonType> result = dialog.showAndWait();
+    if (result.isPresent() && result.get() == openButton) {
+        updateStoreStatus("Open");
+        showInfo("Andok's is now OPEN! You will start receiving orders!");
     }
 }
 
@@ -1148,11 +1205,15 @@ public VBox createRevenueChartPanel() {
     ComboBox<String> timeRangeComboBox = new ComboBox<>();
     timeRangeComboBox.getItems().addAll("Today", "Daily", "Monthly", "Yearly");
     timeRangeComboBox.setValue("Today"); // Default selection
+      timeRangeComboBox.setStyle(
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-border-color: " + MEDIUM_GRAY + ";" +
+            "-fx-border-radius: 3px;" +
+            "-fx-padding: 5px;"
+        );
     timeRangeComboBox.setOnAction(e -> updateRevenueChart(timeRangeComboBox.getValue()));
     
-    // Add some styling to the combo box
-    timeRangeComboBox.setStyle("-fx-font-size: 14px; -fx-pref-width: 150px;");
-    
+   
     // Create a control panel
     HBox controlPanel = new HBox(10, new Label("Time Range:"), timeRangeComboBox);
     controlPanel.setAlignment(Pos.CENTER_LEFT);
@@ -1255,7 +1316,13 @@ private VBox createMenuCategoryChartPanel() {
     refreshButton.setOnAction(e -> updateMenuCategoryChart(barChart));
     
     // Style components
-    refreshButton.setStyle("-fx-font-size: 14px; -fx-pref-width: 120px;");
+//    refreshButton.setStyle("-fx-font-size: 14px; -fx-pref-width: 120px;");
+     refreshButton.setStyle(
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-border-color: " + MEDIUM_GRAY + ";" +
+            "-fx-border-radius: 3px;" +
+            "-fx-padding: 5px;"
+        );
     barChart.setStyle("-fx-font-size: 14px;");
     barChart.setPrefSize(600, 400);
 
@@ -1363,6 +1430,12 @@ private VBox createRiderOrdersChartPanel() {
     ComboBox<String> timePeriodCombo = new ComboBox<>();
     timePeriodCombo.getItems().addAll("All Time", "This Year", "This Month", "Today");
     timePeriodCombo.setValue("This Month");
+     timePeriodCombo.setStyle(
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-border-color: " + MEDIUM_GRAY + ";" +
+            "-fx-border-radius: 3px;" +
+            "-fx-padding: 5px;"
+        );
     timePeriodCombo.setOnAction(e -> updateRiderOrdersChart(barChart, timePeriodCombo.getValue()));
 
     // Add status filter
@@ -1370,10 +1443,13 @@ private VBox createRiderOrdersChartPanel() {
     statusCombo.getItems().addAll("All Orders", "Completed Only");
     statusCombo.setValue("Completed Only");
     statusCombo.setOnAction(e -> updateRiderOrdersChart(barChart, timePeriodCombo.getValue()));
+     statusCombo.setStyle(
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-border-color: " + MEDIUM_GRAY + ";" +
+            "-fx-border-radius: 3px;" +
+            "-fx-padding: 5px;"
+        );
 
-    // Style components
-    timePeriodCombo.setStyle("-fx-font-size: 14px; -fx-pref-width: 150px;");
-    statusCombo.setStyle("-fx-font-size: 14px; -fx-pref-width: 150px;");
 
     // Create control panel
     HBox controlPanel = new HBox(10, 
@@ -1721,10 +1797,22 @@ private VBox createRatingsViewer() {
       "All Ratings", "5 Stars", "4 Stars", "3 Stars", "2 Stars", "1 Star"
   );
     ratingTypeFilter.setValue("All Ratings");
+     ratingTypeFilter.setStyle(
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-border-color: " + MEDIUM_GRAY + ";" +
+            "-fx-border-radius: 3px;" +
+            "-fx-padding: 5px;"
+        );
     
     ComboBox<String> timeFilter = new ComboBox<>();
     timeFilter.getItems().addAll("All Time", "Today", "This Week", "This Month");
     timeFilter.setValue("All Time");
+      timeFilter.setStyle(
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-border-color: " + MEDIUM_GRAY + ";" +
+            "-fx-border-radius: 3px;" +
+            "-fx-padding: 5px;"
+        );
     
     filterBox.getChildren().addAll(
         new Label("Type:"), ratingTypeFilter,

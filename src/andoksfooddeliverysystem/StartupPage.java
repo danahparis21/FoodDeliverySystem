@@ -1,6 +1,7 @@
 package andoksfooddeliverysystem;
 
 import java.io.File;
+import java.net.URL;
 import javafx.animation.*;
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -283,12 +284,24 @@ public class StartupPage extends Application {
         menuSection.setPrefSize(1530, 800);
         menuSection.getStyleClass().add("menu-section");
         
-       // Path to your mp4 file
-        String videoPath = "file:/C:/Users/63945/Documents/AndoksFoodDeliverySystem/AndoksFoodDeliverySystem/src/icons/Andoksbg2.mp4";
+        URL mediaUrl = getClass().getResource("/icons/Andoksbg2.mp4");
+
+        if (mediaUrl == null) {
+            System.out.println("❌ Could not find video in resources");
+            return menuSection; // Exit early so you don't proceed with null
+        } 
 
         // Load media and player
-        Media bgMedia = new Media(videoPath);
+        Media bgMedia = new Media(mediaUrl.toExternalForm());
         MediaPlayer mediaPlayer = new MediaPlayer(bgMedia);
+
+        // Add error listeners (optional but recommended)
+        bgMedia.setOnError(() -> {
+            System.out.println("Media error: " + bgMedia.getError().getMessage());
+        });
+        mediaPlayer.setOnError(() -> {
+            System.out.println("MediaPlayer error: " + mediaPlayer.getError().getMessage());
+        });
 
         // Auto-play, loop, and mute (if you don't want sound)
         mediaPlayer.setAutoPlay(true);
@@ -301,6 +314,7 @@ public class StartupPage extends Application {
         bgVideo.setFitHeight(800);
         bgVideo.setPreserveRatio(false);
         bgVideo.setOpacity(0.8); // same opacity as before
+
         // Background overlay with gradient
         Rectangle overlay = new Rectangle(1530, 800);
         Stop[] stops = new Stop[] {

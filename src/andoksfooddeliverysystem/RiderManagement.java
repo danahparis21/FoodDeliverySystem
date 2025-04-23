@@ -59,6 +59,8 @@ public class RiderManagement {
     private static final String BACKGROUND_WHITE = "#FFFFFF";
     private static final String LIGHT_GRAY = "#F5F5F5";
     private static final String TEXT_DARK = "#212121";  
+    private static final String neutralWhite = "#FFFFFF";
+    private static final String mediumGray = "#E0E0E0";
     private static TextField nameField = new TextField();
     private static TextField contactField = new TextField();
     private static ImageView riderImageView = new ImageView();
@@ -373,7 +375,8 @@ public class RiderManagement {
         categoryFilter.getItems().addAll("All", "Available", "Delivering", "Online", "Offline");
         categoryFilter.setValue("All");
         categoryFilter.setPrefHeight(35);
-        categoryFilter.setStyle("-fx-background-radius: 4px;");
+        categoryFilter.setStyle("-fx-background-color: " + neutralWhite + "; -fx-border-color: " + mediumGray + "; -fx-border-radius: 4px;");
+    
         
         Button sortAZ = new Button("A-Z");
         sortAZ.setPrefHeight(35);

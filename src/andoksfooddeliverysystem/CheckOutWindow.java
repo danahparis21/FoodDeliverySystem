@@ -68,6 +68,9 @@ public class CheckOutWindow {
     static ComboBox<String> pickupTimeCombo;
     static ComboBox<String> paymentMethodComboBox = new ComboBox<>();
     static Label deliveryLabel;
+    private static final String WHITE = "#FFFFFF";
+    private static final String LIGHT_GRAY = "#F5F5F5";
+    private static final String MEDIUM_GRAY = "#E0E0E0";
    
     // Define style constants for reuse
     private static final String MAIN_BACKGROUND = "-fx-background-color: #FFFFFF;";
@@ -79,7 +82,12 @@ public class CheckOutWindow {
     private static final String BUTTON_STYLE = "-fx-background-color: #D32F2F; -fx-text-fill: white; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 10 20; -fx-background-radius: 5;";
     private static final String SECONDARY_BUTTON_STYLE = "-fx-background-color: #FFCC00; -fx-text-fill: #333333; -fx-font-weight: bold; -fx-cursor: hand; -fx-padding: 10 20; -fx-background-radius: 5;";
     private static final String FIELD_STYLE = "-fx-background-radius: 5; -fx-border-radius: 5; -fx-border-color: #CCCCCC; -fx-padding: 8;";
-    private static final String COMBO_STYLE = "-fx-background-radius: 5; -fx-border-radius: 5; -fx-border-color: #CCCCCC; -fx-padding: 8;";
+    private static final String COMBO_STYLE = 
+    "-fx-background-radius: 5; " +
+    "-fx-border-radius: 5; " +
+    "-fx-background-color: " + WHITE + "; " +
+    "-fx-border-color: " + MEDIUM_GRAY + "; " +
+    "-fx-padding: 8;";
 
     static {
         pickupTimeCombo = new ComboBox<>();
@@ -180,6 +188,7 @@ public class CheckOutWindow {
         deliveryTypeCombo.setStyle(COMBO_STYLE);
         deliveryTypeCombo.setPrefWidth(300);
         
+        
         // ✅ Manually call the update logic once
         updateDeliveryAndTotal(deliveryTypeCombo, deliveryLabel, totalLabel);
 
@@ -245,9 +254,21 @@ public class CheckOutWindow {
         addressListView.setItems(getCustomerAddresses(customerId)); // Load customer addresses
 
       Button saveButton = new Button("Save Address");
-        saveButton.setOnAction(e -> {
-    // Validation checks remain the same...
-    
+        saveButton.setStyle(SECONDARY_BUTTON_STYLE);
+         saveButton.setOnAction(e -> {
+            if (streetField.getText().trim().isEmpty()) {
+                showAlert("Validation Error", "Street is required");
+                return;
+            }
+            if (barangayCombo.getSelectionModel().getSelectedItem() == null) {
+                showAlert("Validation Error", "Barangay is required");
+                return;
+            }
+            if (contactNumberField.getText().trim().isEmpty()) {
+                showAlert("Validation Error", "Contact number is required");
+                return;
+            }
+            
     // Save address to database
         addressId = saveAddressToDatabase(
             customerId,
