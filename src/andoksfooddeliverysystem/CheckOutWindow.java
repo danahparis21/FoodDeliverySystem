@@ -894,23 +894,27 @@ VBox.setVgrow(addressListView, Priority.ALWAYS);
         scrollPane.setFitToWidth(true); // Makes it expand to available width
         scrollPane.setStyle("-fx-background: transparent; -fx-background-color: transparent;");
 
-
-        
         // Right section: Order Summary
         VBox rightColumn = new VBox(orderSummary);
 
         // Create a split layout with address on left and summary on right
-        HBox contentLayout = new HBox(20, scrollPane, rightColumn);
+        HBox contentLayout = new HBox(20, scrollPane, rightColumn); // 'scrollPane' should be your address/details pane
         contentLayout.setAlignment(Pos.TOP_CENTER);
 
+        // Add header, progress bar, and content into main layout
         mainLayout.getChildren().addAll(header, progressSection, contentLayout);
 
+        // Create a ScrollPane to wrap the whole main layout
+        ScrollPane mainScrollPane = new ScrollPane(mainLayout);
+        mainScrollPane.setFitToWidth(true); // So it stretches horizontally
+        mainScrollPane.setFitToHeight(true); // Optional - helps with vertical fitting
+
         // Apply a modern flat design
-        Scene scene = new Scene(mainLayout, 1530, 800);
-        
-        // Add external CSS if needed
+        Scene scene = new Scene(mainScrollPane, 1530, 800);
+
+        // Optionally load external CSS
         // scene.getStylesheets().add(getClass().getResource("/styles/checkout.css").toExternalForm());
-        
+
         checkoutStage.setScene(scene);
         checkoutStage.setTitle("Checkout - Andok's Online Ordering");
         checkoutStage.showAndWait();

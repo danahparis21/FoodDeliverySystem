@@ -289,16 +289,17 @@ public class OrderHistory {
         Label totalOrdersLabel = new Label("Total Orders: " + orderData.size());
         totalOrdersLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #D32F2F;");
         
-        // Calculate total revenue
+        // Calculate total revenue for completed orders only
         double totalRevenue = orderData.stream()
+            .filter(order -> "Completed".equalsIgnoreCase(order.getStatus())) // Filter by completed status
             .mapToDouble(OrderHistoryFetcher::getTotalPrice)
             .sum();
-            
+
         Label revenueLabel = new Label(String.format("Total Revenue: ₱%.2f", totalRevenue));
         revenueLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #D32F2F;");
-        
+
         footerBar.getChildren().addAll(totalOrdersLabel, revenueLabel);
-        
+
         // Stack components vertically in main container
         root.getChildren().addAll(headerLabel, filterControls, tableView, footerBar);
     }
