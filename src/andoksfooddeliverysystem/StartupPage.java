@@ -56,13 +56,13 @@ public class StartupPage extends Application {
         content.setAlignment(Pos.TOP_CENTER);
         content.setStyle("-fx-background-color: " + LIGHT_COLOR + ";");
 
-        // Section 1: Hero Banner with animated entrance
+        // Section 1: Hero Banner animated
         StackPane heroSection = createHeroSection();
         
-        // Section 2: About Andoks section with parallax effect
+        // Section 2: About Andoks section 
         StackPane aboutSection = createAboutSection();
         
-        // Section 3: Menu Showcase with carousel animation
+        // Section 3: Menu Showcase 
         StackPane menuShowcaseSection = createMenuShowcaseSection();
         
         // Section 4: Customer Testimonials
@@ -454,7 +454,7 @@ public class StartupPage extends Application {
         String[] names = {"Maria Santos", "Juan Dela Cruz", "Ana Garcia"};
         String[] images = {
             "file:/C:/Users/63945/Documents/AndoksFoodDeliverySystem/AndoksFoodDeliverySystem/src/icons/customer1.jpg",
-            "file:/C:/Users/63945/Documents/AndoksFoodDeliverySystem/AndoksFoodDeliverySystem/src/icons/customer2.jpg",
+            "file:/C:/Users/63945/Documents/AndoksFoodDeliverySystem/AndoksFoodDeliverySystem/src/icons/customer1.jpg",
             "file:/C:/Users/63945/Documents/AndoksFoodDeliverySystem/AndoksFoodDeliverySystem/src/icons/customer3.jpg"
         };
 

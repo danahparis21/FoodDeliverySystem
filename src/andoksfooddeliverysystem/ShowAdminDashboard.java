@@ -339,18 +339,18 @@ public class ShowAdminDashboard {
         profileRow.setAlignment(Pos.CENTER_LEFT);
         profileRow.getChildren().addAll(avatarPane, adminInfo);
         
-        // Last login info
-        Label lastLoginLabel = new Label("Last Login: Today, 08:45 AM");
-        lastLoginLabel.setStyle(
-            "-fx-font-size: 12px;" +
-            "-fx-text-fill: " + LIGHT_TEXT + ";" +
-            "-fx-padding: 10 0 0 0;"
-        );
+//        // Last login info
+//        Label lastLoginLabel = new Label("Last Login: Today, 08:45 AM");
+//        lastLoginLabel.setStyle(
+//            "-fx-font-size: 12px;" +
+//            "-fx-text-fill: " + LIGHT_TEXT + ";" +
+//            "-fx-padding: 10 0 0 0;"
+//        );
         
         // Card container
         VBox profileCard = new VBox(15);
         profileCard.setPadding(new Insets(20));
-        profileCard.getChildren().addAll(profileRow, lastLoginLabel);
+        profileCard.getChildren().addAll(profileRow);
         profileCard.setStyle(
             "-fx-background-color: " + WHITE + ";" +
             "-fx-background-radius: 10px;" +
