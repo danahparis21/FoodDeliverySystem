@@ -156,6 +156,9 @@ public class AdminDashboard extends Application {
             "-fx-background-radius: 5;"
         ));
         
+        
+        
+        
         toggleSidebar.setOnMouseExited(e -> toggleSidebar.setStyle(
             "-fx-background-color: transparent;" +
             "-fx-text-fill: " + PRIMARY_RED + ";" +

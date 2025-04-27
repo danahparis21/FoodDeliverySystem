@@ -14,7 +14,12 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.animation.Animation;
+import javafx.animation.FadeTransition;
+import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
+import javafx.animation.ParallelTransition;
+import javafx.animation.RotateTransition;
+import javafx.animation.ScaleTransition;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.beans.property.IntegerProperty;
@@ -76,6 +81,7 @@ public class ShowAdminDashboard {
     private VBox root;
     private int userID;
     private Label storeStatusLabel = new Label("Loading...");
+    private Label ratingsLabel = new Label("Loading...");
     private Button toggleShopButton = new Button("Toggle Shop");
     private Label adminNameLabel = new Label("Admin Name");
     private Label adminEmailLabel = new Label("admin@email.com");
@@ -361,23 +367,54 @@ public class ShowAdminDashboard {
         return profileCard;
     }
     
-    private VBox createStoreStatusCard() {
-        // Section title
-        Label storeTitle = new Label("STORE STATUS");
-        storeTitle.setStyle(
-            "-fx-font-size: 14px;" +
+   
+private VBox createStoreStatusCard() {
+    // Section title
+    Label storeTitle = new Label("STORE STATUS");
+    storeTitle.setStyle(
+        "-fx-font-size: 14px;" +
+        "-fx-font-weight: bold;" +
+        "-fx-text-fill: " + LIGHT_TEXT + ";"
+    );
+
+    // Status indicator
+    storeStatusLabel.setStyle(
+        "-fx-font-size: 18px;" +
+        "-fx-font-weight: bold;" +
+        "-fx-text-fill: " + SUCCESS_GREEN + ";"
+    );
+    
+    // Add ratings label (will be populated in loadStoreStatus method)
+    Label ratingsLabel = new Label();
+    ratingsLabel.setStyle(
+        "-fx-font-size: 14px;" +
+        "-fx-font-weight: bold;" +
+        "-fx-text-fill: " + DARK_TEXT + ";"
+    );
+    
+    // Better toggle button
+    toggleShopButton.setStyle(
+        "-fx-background-color: " + PRIMARY_RED + ";" +
+        "-fx-text-fill: " + WHITE + ";" +
+        "-fx-font-weight: bold;" +
+        "-fx-background-radius: 5px;" +
+        "-fx-padding: 10px 20px;" +
+        "-fx-cursor: hand;"
+    );
+    
+    // Hover effect
+    toggleShopButton.setOnMouseEntered(e -> {
+        toggleShopButton.setStyle(
+            "-fx-background-color: #A01118;" + // Darker red
+            "-fx-text-fill: " + WHITE + ";" +
             "-fx-font-weight: bold;" +
-            "-fx-text-fill: " + LIGHT_TEXT + ";"
+            "-fx-background-radius: 5px;" +
+            "-fx-padding: 10px 20px;" +
+            "-fx-cursor: hand;"
         );
-        
-        // Status indicator
-        storeStatusLabel.setStyle(
-            "-fx-font-size: 18px;" +
-            "-fx-font-weight: bold;" +
-            "-fx-text-fill: " + SUCCESS_GREEN + ";"
-        );
-        
-        // Better toggle button
+    });
+    
+    toggleShopButton.setOnMouseExited(e -> {
         toggleShopButton.setStyle(
             "-fx-background-color: " + PRIMARY_RED + ";" +
             "-fx-text-fill: " + WHITE + ";" +
@@ -386,84 +423,71 @@ public class ShowAdminDashboard {
             "-fx-padding: 10px 20px;" +
             "-fx-cursor: hand;"
         );
-        
-        // Hover effect
-        toggleShopButton.setOnMouseEntered(e -> {
-            toggleShopButton.setStyle(
-                "-fx-background-color: #A01118;" + // Darker red
-                "-fx-text-fill: " + WHITE + ";" +
-                "-fx-font-weight: bold;" +
-                "-fx-background-radius: 5px;" +
-                "-fx-padding: 10px 20px;" +
-                "-fx-cursor: hand;"
-            );
-        });
-        
-        toggleShopButton.setOnMouseExited(e -> {
-            toggleShopButton.setStyle(
-                "-fx-background-color: " + PRIMARY_RED + ";" +
-                "-fx-text-fill: " + WHITE + ";" +
-                "-fx-font-weight: bold;" +
-                "-fx-background-radius: 5px;" +
-                "-fx-padding: 10px 20px;" +
-                "-fx-cursor: hand;"
-            );
-        });
-        
-        // Keep the original action
-        toggleShopButton.setOnAction(e -> {
-            try {
-                toggleShop();
-            } catch (MessagingException ex) {
-                Logger.getLogger(ShowAdminDashboard.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        });
-        
-        // Opening hours info
-        VBox hoursInfo = new VBox(5);
-        hoursInfo.setPadding(new Insets(10, 0, 0, 0));
-        
-        Label businessHoursLabel = new Label("BUSINESS HOURS");
-        businessHoursLabel.setStyle(
-            "-fx-font-size: 12px;" +
-            "-fx-font-weight: bold;" +
-            "-fx-text-fill: " + LIGHT_TEXT + ";"
-        );
-        
-        Label weekdaysLabel = new Label("Mon-Sun: 8:00 AM - 8:00 PM");
-        weekdaysLabel.setStyle(
-            "-fx-font-size: 12px;" +
-            "-fx-text-fill: " + DARK_TEXT + ";"
-        );
-   
-        
-        hoursInfo.getChildren().addAll(
-            businessHoursLabel,
-            weekdaysLabel
-            
-        );
-        
-        // Combine into store card layout
-        VBox storeCardContent = new VBox(15);
-        storeCardContent.getChildren().addAll(
-            storeTitle,
-            storeStatusLabel,
-            toggleShopButton,
-            hoursInfo
-        );
-        
-        // Card container
-        VBox storeCard = new VBox(storeCardContent);
-        storeCard.setPadding(new Insets(20));
-        storeCard.setStyle(
-            "-fx-background-color: " + WHITE + ";" +
-            "-fx-background-radius: 10px;" +
-            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 3);" +
-            "-fx-min-width: 350px;"
-        );
-        
-        return storeCard;
-    }
+    });
+    
+    // Keep the original action
+    toggleShopButton.setOnAction(e -> {
+        try {
+            toggleShop();
+        } catch (MessagingException ex) {
+            Logger.getLogger(ShowAdminDashboard.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    });
+    
+    // Opening hours info
+    VBox hoursInfo = new VBox(5);
+    hoursInfo.setPadding(new Insets(10, 0, 0, 0));
+    
+    Label businessHoursLabel = new Label("BUSINESS HOURS");
+    businessHoursLabel.setStyle(
+        "-fx-font-size: 12px;" +
+        "-fx-font-weight: bold;" +
+        "-fx-text-fill: " + LIGHT_TEXT + ";"
+    );
+    
+    Label weekdaysLabel = new Label("Mon-Sun: 8:00 AM - 8:00 PM");
+    weekdaysLabel.setStyle(
+        "-fx-font-size: 12px;" +
+        "-fx-text-fill: " + DARK_TEXT + ";"
+    );
+    
+    hoursInfo.getChildren().addAll(
+        businessHoursLabel,
+        weekdaysLabel
+    );
+    
+    // Combine into store card layout
+    VBox storeCardContent = new VBox(15);
+    storeCardContent.getChildren().addAll(
+        storeTitle,
+        storeStatusLabel,
+        ratingsLabel,  // Add the ratings label here
+        toggleShopButton,
+        hoursInfo
+    );
+    
+    // Card container
+    VBox storeCard = new VBox(storeCardContent);
+    storeCard.setPadding(new Insets(20));
+    storeCard.setStyle(
+        "-fx-background-color: " + WHITE + ";" +
+        "-fx-background-radius: 10px;" +
+        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 3);" +
+        "-fx-min-width: 350px;"
+    );
+    
+    // Make ratingsLabel accessible to class methods
+    this.ratingsLabel = ratingsLabel;
+//    
+//    // Load store status and ratings
+//    try {
+//        loadStoreStatus();
+//    } catch (MessagingException ex) {
+//        Logger.getLogger(ShowAdminDashboard.class.getName()).log(Level.SEVERE, null, ex);
+//    }
+    
+    return storeCard;
+}
     
     private VBox createPerformanceSection() {
         // Section header
@@ -588,30 +612,7 @@ public class ShowAdminDashboard {
         return performanceBox;
     }
     
-    // Helper method to style pie charts panel
-    private VBox stylePieChartsPanel(VBox original) {
-        // Apply styling to the panel
-        VBox styledPanel = new VBox(15);
-        styledPanel.getChildren().addAll(original.getChildren());
-        styledPanel.setPadding(new Insets(20));
-        styledPanel.setStyle(
-            "-fx-background-color: " + WHITE + ";" +
-            "-fx-background-radius: 10px;" +
-            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 3);"
-        );
-        
-        // Add section title
-        Label sectionTitle = new Label("KEY METRICS DISTRIBUTION");
-        sectionTitle.setStyle(
-            "-fx-font-size: 16px;" +
-            "-fx-font-weight: bold;" +
-            "-fx-text-fill: " + DARK_TEXT + ";"
-        );
-        
-        styledPanel.getChildren().add(0, sectionTitle);
-        
-        return styledPanel;
-    }
+  
     
     // Helper method to style chart panels
     private VBox styleChartPanel(VBox original, String title) {
@@ -637,6 +638,158 @@ public class ShowAdminDashboard {
         
         return styledPanel;
     }
+    
+   public VBox createRevenueChartPanel() {
+    // Create axes and chart with modern styling
+    CategoryAxis xAxis = new CategoryAxis();
+    NumberAxis yAxis = new NumberAxis();
+    xAxis.setLabel("Time");
+    yAxis.setLabel("Revenue (₱)");
+    
+    // Create line chart with modern styling
+    lineChart = new LineChart<>(xAxis, yAxis);
+    lineChart.setTitle("Total Revenue Over Time");
+    lineChart.setAnimated(true); // Enable animations
+    lineChart.setCreateSymbols(true);
+    lineChart.setLegendVisible(true);
+    
+    // Apply modern styling to the chart
+    String chartStyle = 
+        "-fx-background-color: transparent;" +
+        "-fx-plot-background-color: rgba(250, 250, 252, 0.8);" +
+        "-fx-horizontal-grid-lines-visible: true;" +
+        "-fx-horizontal-zero-line-visible: true;" +
+        "-fx-vertical-grid-lines-visible: false;";
+    lineChart.setStyle(chartStyle);
+    
+    // Style the symbols and lines
+    lineChart.lookupAll(".chart-series-line").forEach(node -> 
+        node.setStyle("-fx-stroke-width: 2.5px;")
+    );
+    lineChart.lookupAll(".chart-line-symbol").forEach(node -> 
+        node.setStyle("-fx-background-radius: 5px; -fx-padding: 5px;")
+    );
+    
+    // Create modern time range selector with gradient
+    ComboBox<String> timeRangeComboBox = new ComboBox<>();
+    timeRangeComboBox.getItems().addAll("Today", "Daily", "Weekly", "Monthly", "Yearly");
+    timeRangeComboBox.setValue("Today");
+    timeRangeComboBox.setStyle(
+        "-fx-background-color: linear-gradient(to bottom, #ffffff, #f5f7fa);" +
+        "-fx-background-radius: 6px;" +
+        "-fx-border-color: #e2e8f0;" +
+        "-fx-border-radius: 6px;" +
+        "-fx-padding: 7px;" +
+        "-fx-font-size: 13px;"
+    );
+    
+    // Add animation transition when changing time ranges
+    timeRangeComboBox.setOnAction(e -> {
+        String selectedRange = timeRangeComboBox.getValue();
+        
+        // Create fade transition for smooth data change
+        FadeTransition fadeOut = new FadeTransition(Duration.millis(250), lineChart);
+        fadeOut.setFromValue(1.0);
+        fadeOut.setToValue(0.3);
+        
+        FadeTransition fadeIn = new FadeTransition(Duration.millis(350), lineChart);
+        fadeIn.setFromValue(0.3);
+        fadeIn.setToValue(1.0);
+        
+        // Run the animations in sequence
+        fadeOut.setOnFinished(event -> {
+            updateRevenueChart(selectedRange);
+            fadeIn.play();
+        });
+        
+        fadeOut.play();
+    });
+    
+    // Create a refresh button with animation
+    Button refreshButton = new Button("↻");
+    refreshButton.setStyle(
+        "-fx-background-color: #4299e1;" +
+        "-fx-text-fill: white;" +
+        "-fx-background-radius: 50%;" +
+        "-fx-min-width: 32px;" +
+        "-fx-min-height: 32px;" +
+        "-fx-font-size: 14px;" +
+        "-fx-font-weight: bold;"
+    );
+    
+    // Add refresh animation
+    refreshButton.setOnAction(e -> {
+        RotateTransition rotateAnim = new RotateTransition(Duration.millis(750), refreshButton);
+        rotateAnim.setByAngle(360);
+        rotateAnim.setCycleCount(1);
+        rotateAnim.setInterpolator(Interpolator.EASE_BOTH);
+        rotateAnim.play();
+        
+        // Refresh data with animation
+        updateRevenueChart(timeRangeComboBox.getValue());
+    });
+    
+//    // Add info label for revenue stats
+//    Label revenueStatsLabel = new Label("Total: ₱0.00");
+//    revenueStatsLabel.setStyle(
+//        "-fx-font-size: 14px;" +
+//        "-fx-font-weight: bold;" +
+//        "-fx-text-fill: #2d3748;"
+//    );
+    
+    // Create control panel with modern layout
+    HBox controlPanel = new HBox(15);
+    controlPanel.setAlignment(Pos.CENTER_LEFT);
+    controlPanel.setPadding(new Insets(5, 10, 15, 10));
+    
+    // Left side: range selector
+    HBox rangeSelector = new HBox(8, new Label("Time Range:"), timeRangeComboBox);
+    rangeSelector.setAlignment(Pos.CENTER_LEFT);
+    
+    // Right side: stats and refresh button
+    HBox statsAndRefresh = new HBox(15, refreshButton);
+    statsAndRefresh.setAlignment(Pos.CENTER_RIGHT);
+    
+    // Add spacing to push elements to opposite sides
+    Region spacer = new Region();
+    HBox.setHgrow(spacer, Priority.ALWAYS);
+    
+    // Combine all in control panel
+    controlPanel.getChildren().addAll(rangeSelector, spacer, statsAndRefresh);
+    
+    // Add subtle gradient background to the entire panel
+    VBox chartContainer = new VBox(5, controlPanel, lineChart);
+    chartContainer.setPadding(new Insets(15));
+    chartContainer.setStyle(
+        "-fx-background-color: linear-gradient(to bottom right, #ffffff, #f8fafc);" +
+        "-fx-background-radius: 12px;" +
+        "-fx-border-color: #e2e8f0;" +
+        "-fx-border-radius: 12px;" +
+        "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.07), 15, 0, 0, 5);"
+    );
+    
+    // Update chart data with enter animation
+    Platform.runLater(() -> {
+        updateRevenueChart("Today");
+        
+        // Add enter animation
+        ScaleTransition scaleIn = new ScaleTransition(Duration.millis(400), lineChart);
+        scaleIn.setFromX(0.94);
+        scaleIn.setFromY(0.94);
+        scaleIn.setToX(1);
+        scaleIn.setToY(1);
+        scaleIn.setInterpolator(Interpolator.EASE_OUT);
+        
+        FadeTransition fadeIn = new FadeTransition(Duration.millis(450), lineChart);
+        fadeIn.setFromValue(0.2);
+        fadeIn.setToValue(1.0);
+        
+        ParallelTransition enterAnimation = new ParallelTransition(scaleIn, fadeIn);
+        enterAnimation.play();
+    });
+    
+    return chartContainer;
+}
     
     // Helper method for generic panel styling
     private VBox styleGenericPanel(Node content, String title) {
@@ -695,18 +848,28 @@ public class ShowAdminDashboard {
 }
 
 
- 
+ // Update your loadStoreStatus method to also fetch and display ratings
 private void loadStoreStatus() throws MessagingException {
-    String query = "SELECT store_status FROM store WHERE store_id = 1";
+    String query = "SELECT store_status, average_rating, total_reviews FROM store WHERE store_id = 1";
     try (Connection conn = Database.connect();
          PreparedStatement stmt = conn.prepareStatement(query);
          ResultSet rs = stmt.executeQuery()) {
         
         if (rs.next()) {
+            // Load store status
             String status = rs.getString("store_status");
             storeStatusLabel.setText("Store is currently: " + status);
             toggleShopButton.setText(status.equalsIgnoreCase("Open") ? "Close Shop" : "Open Shop");
             System.out.println("✅ Store status loaded: " + status);
+            
+            // Load and display ratings
+            double averageRating = rs.getDouble("average_rating");
+            int totalReviews = rs.getInt("total_reviews");
+            
+            // Format with one decimal place
+            String formattedRating = String.format("%.1f", averageRating);
+            ratingsLabel.setText("⭐ " + formattedRating + " (" + totalReviews + ")");
+            System.out.println("✅ Store ratings loaded: " + formattedRating + " from " + totalReviews + " reviews");
             
             // If store is closed at login, show custom dialog
             if (status.equalsIgnoreCase("Close")) {
@@ -718,6 +881,7 @@ private void loadStoreStatus() throws MessagingException {
     } catch (SQLException e) {
         e.printStackTrace();
         storeStatusLabel.setText("❌ Error loading store status");
+        ratingsLabel.setText("❌ Error loading ratings");
     }
 }
 
@@ -1071,6 +1235,34 @@ private ObservableList<PieChart.Data> getBusiestTimeOfDayData() {
 
     return data;
 }
+  // Helper method to style pie charts panel
+    public static VBox stylePieChartsPanel(VBox original) {
+        // Apply styling to the panel
+        VBox styledPanel = new VBox(15);
+        styledPanel.getChildren().addAll(original.getChildren());
+        styledPanel.setPadding(new Insets(20));
+        styledPanel.setAlignment(Pos.CENTER); // Center everything
+        styledPanel.setStyle(
+            "-fx-background-color: " + WHITE + ";" +
+            "-fx-background-radius: 10px;" +
+            "-fx-effect: dropshadow(gaussian, rgba(0,0,0,0.1), 10, 0, 0, 3);"
+        );
+        
+        // Add section title
+        Label sectionTitle = new Label("KEY METRICS DISTRIBUTION");
+        sectionTitle.setStyle(
+            "-fx-font-size: 16px;" +
+            "-fx-font-weight: bold;" +
+            "-fx-text-fill: " + DARK_TEXT + ";" +
+            "-fx-padding: 0 0 10 0;"
+        );
+        
+        styledPanel.getChildren().add(0, sectionTitle);
+        
+        return styledPanel;
+    }
+    
+    
 private VBox createPieChartsPanel() {
     VBox box = new VBox(20);
     box.setPadding(new Insets(10));
@@ -1188,46 +1380,7 @@ private void processLabels(PieChart chart, boolean truncateNames) {
         });
     }
 }
-public VBox createRevenueChartPanel() {
-    // Create axes and chart
-    CategoryAxis xAxis = new CategoryAxis();
-    NumberAxis yAxis = new NumberAxis();
-    xAxis.setLabel("Time");
-    yAxis.setLabel("Revenue (₱)");
-    
-    lineChart = new LineChart<>(xAxis, yAxis);
-    lineChart.setTitle("Total Revenue Over Time");
-    lineChart.setAnimated(false); // Disable animations for better performance
-    lineChart.setCreateSymbols(true); // Ensure data points are visible
-    lineChart.setLegendVisible(true);
 
-    // Create time range selector
-    ComboBox<String> timeRangeComboBox = new ComboBox<>();
-    timeRangeComboBox.getItems().addAll("Today", "Daily", "Monthly", "Yearly");
-    timeRangeComboBox.setValue("Today"); // Default selection
-      timeRangeComboBox.setStyle(
-            "-fx-background-color: " + WHITE + ";" +
-            "-fx-border-color: " + MEDIUM_GRAY + ";" +
-            "-fx-border-radius: 3px;" +
-            "-fx-padding: 5px;"
-        );
-    timeRangeComboBox.setOnAction(e -> updateRevenueChart(timeRangeComboBox.getValue()));
-    
-   
-    // Create a control panel
-    HBox controlPanel = new HBox(10, new Label("Time Range:"), timeRangeComboBox);
-    controlPanel.setAlignment(Pos.CENTER_LEFT);
-    controlPanel.setPadding(new Insets(10));
-    
-    // Combine everything in a VBox
-    VBox chartContainer = new VBox(10, controlPanel, lineChart);
-    chartContainer.setPadding(new Insets(15));
-    
-    // Initialize chart data
-    updateRevenueChart("Today");
-    
-    return chartContainer;
-}
 private void updateRevenueChart(String range) {
     String query = buildRevenueQuery(range);
     XYChart.Series<String, Number> series = new XYChart.Series<>();

@@ -274,7 +274,7 @@ public class CustomerDashboard extends Application {
         profilePic.setStrokeWidth(1.5);
         
         // Add username label
-        Label username = new Label("Guest");
+        Label username = new Label("Customer");
         username.setStyle("-fx-text-fill: " + ANDOKS_WHITE + "; -fx-font-size: 14px;");
         
         profileBox.getChildren().addAll(profilePic, username);

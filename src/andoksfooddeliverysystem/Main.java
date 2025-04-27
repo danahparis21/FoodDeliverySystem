@@ -2,6 +2,8 @@ package andoksfooddeliverysystem;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.animation.FadeTransition;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.animation.TranslateTransition;
 import javafx.application.Application;
 import static javafx.application.Application.launch;
@@ -28,6 +30,11 @@ public class Main extends Application {
     private boolean darkMode = false;
     private Scene scene;
     private Label title;
+    private int failedAttempts = 0;
+    private boolean isCooldown = false;
+    private long cooldownStartTime = 0;
+    private final int COOLDOWN_SECONDS = 15;
+
     
     // Andok's color palette
     private final String ANDOKS_RED = "#D32F2F";
@@ -377,6 +384,13 @@ public class Main extends Application {
             "-fx-cursor: hand;" +
             "-fx-background-radius: 20;"
         );
+          Label cooldownLabel = new Label();
+        cooldownLabel.setStyle(
+            "-fx-text-fill: red;" +
+            "-fx-font-size: 12px;" +
+            "-fx-padding: 5 0 0 0;"
+        );
+        cooldownLabel.setVisible(false);
         
         // Button hover effect
         loginBtn.setOnMouseEntered(e -> 
@@ -401,40 +415,87 @@ public class Main extends Application {
             )
         );
         
-        loginBtn.setOnAction(e -> {
-            try {
-                String username = usernameField.getText();
-                String password = passwordField.getText();
-                
-                // Get the current stage (login window)
-                Stage currentStage = (Stage) loginBtn.getScene().getWindow();
-                
-                // Show loading animation
-                showLoading(loginBtn);
-                
-                // Store the returned User object
-                User loggedInUser = User.login(username, password, currentStage);
-                
-                if (loggedInUser != null) {
-                    System.out.println("Login successful! User role: " + loggedInUser.getRole());
-                } else {
-                    System.out.println("Invalid credentials.");
-                    showErrorAnimation(loginBtn);
-                    Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid username or password!", ButtonType.OK);
-                    alert.getDialogPane().setStyle("-fx-background-color: " + ANDOKS_WHITE + ";");
-                    ((Button) alert.getDialogPane().lookupButton(ButtonType.OK)).setStyle(
-                        "-fx-background-color: " + ANDOKS_RED + ";" +
-                        "-fx-text-fill: white;" +
-                        "-fx-background-radius: 20;"
-                    );
-                    alert.showAndWait();
-                }
-            } catch (MessagingException ex) {
-                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+      loginBtn.setOnAction(e -> {
+        if (isCooldown) {
+            long secondsPassed = (System.currentTimeMillis() - cooldownStartTime) / 1000;
+            long secondsLeft = COOLDOWN_SECONDS - secondsPassed;
+
+            // Don't allow login if time is still left
+            if (secondsLeft > 0) {
+                Alert alert = new Alert(Alert.AlertType.WARNING,
+                    "Too many failed attempts. Please wait " + secondsLeft + " more seconds.");
+                alert.showAndWait();
+                return;
+            } else {
+                // If time is up but cooldown flag is still true (e.g. app just didn't update it yet)
+                isCooldown = false;
+                loginBtn.setDisable(false);
+                cooldownLabel.setVisible(false);
+                failedAttempts = 0;
             }
-            
-        });
-        
+        }
+
+
+        try {
+            String username = usernameField.getText();
+            String password = passwordField.getText();
+
+            Stage currentStage = (Stage) loginBtn.getScene().getWindow();
+
+            showLoading(loginBtn);
+
+            User loggedInUser = User.login(username, password, currentStage);
+
+            if (loggedInUser != null) {
+                System.out.println("Login successful! User role: " + loggedInUser.getRole());
+                failedAttempts = 0; // Reset after successful login
+            } else {
+                failedAttempts++;
+                showErrorAnimation(loginBtn);
+
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Invalid username or password!", ButtonType.OK);
+                alert.getDialogPane().setStyle("-fx-background-color: " + ANDOKS_WHITE + ";");
+                ((Button) alert.getDialogPane().lookupButton(ButtonType.OK)).setStyle(
+                    "-fx-background-color: " + ANDOKS_RED + ";" +
+                    "-fx-text-fill: white;" +
+                    "-fx-background-radius: 20;"
+                );
+                alert.showAndWait();
+
+                // Check if max attempts reached
+               if (failedAttempts >= 3) {
+                isCooldown = true;
+                  cooldownStartTime = System.currentTimeMillis(); // <— Store the start time
+                loginBtn.setDisable(true);
+                cooldownLabel.setVisible(true);
+
+                final int[] secondsLeft = {15}; // cooldown duration
+                cooldownLabel.setText("Try again in " + secondsLeft[0] + " seconds...");
+
+                Timeline cooldownTimer = new Timeline(
+                    new KeyFrame(Duration.seconds(1), ev -> {
+                        secondsLeft[0]--;
+                        if (secondsLeft[0] > 0) {
+                            cooldownLabel.setText("Try again in " + secondsLeft[0] + " seconds...");
+                        } else {
+                            isCooldown = false;
+                            loginBtn.setDisable(false);
+                            cooldownLabel.setVisible(false);
+                            failedAttempts = 0;
+                        }
+                    })
+                );
+                cooldownTimer.setCycleCount(15);
+                cooldownTimer.play();
+            }
+            }
+        } catch (MessagingException ex) {
+            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    });
+
+       
+
         
         
         // Sign up text
@@ -471,6 +532,7 @@ public class Main extends Application {
             passwordBox,
             
             loginBtn,
+            cooldownLabel,
             signUpContainer
         );
         
