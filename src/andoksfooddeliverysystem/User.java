@@ -129,7 +129,10 @@ public class User {
             if (role.equals("admin")) {
                 new AdminDashboard(userID).start(new Stage());
             } else if (role.equals("customer")) {
+                CartSession.clearCart();  // Clear the cart when logging in as a new user
                 new CustomerDashboard(userID).start(new Stage()); 
+                System.out.println("Cart cleared on login.");
+
             }
             else if (role.equals("rider")) {
                 // Fetch the rider_id using the user_id

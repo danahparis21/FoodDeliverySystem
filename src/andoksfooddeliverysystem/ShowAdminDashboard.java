@@ -911,18 +911,18 @@ private void updateStoreStatus(String newStatus) throws MessagingException {
             }
 
             // 💌 Optional: send email
-            SendEmail.sendEmail(
-                email,
-                "Andok's is Now Open!",
-                """
-                Hi there!
-
-                Andok's is officially open! 🎉
-                Place your order now while it's hot!
-
-                Love, Andok's Team
-                """
-            );
+//            SendEmail.sendEmail(
+//                email,
+//                "Andok's is Now Open!",
+//                """
+//                Hi there!
+//
+//                Andok's is officially open! 🎉
+//                Place your order now while it's hot!
+//
+//                Love, Andok's Team
+//                """
+//            );
         }
 
     } catch (SQLException e) {

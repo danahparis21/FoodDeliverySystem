@@ -461,6 +461,14 @@ public class Signup extends Application {
                 return;
             }
             
+            if (!email.matches("^[a-zA-Z0-9._%+-]+@gmail\\.com$")) {
+                Alert alert = new Alert(Alert.AlertType.ERROR, "Please use a valid Gmail address.", ButtonType.OK);
+                styleAlert(alert);
+                alert.showAndWait();
+                return;
+            }
+
+            
             if (User.emailExists(email)) {
                 Alert alert = new Alert(Alert.AlertType.ERROR, "Email already in use! Try another one.", ButtonType.OK);
                 styleAlert(alert);

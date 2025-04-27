@@ -286,7 +286,7 @@ public class ShowOrders {
                 statusCircle.setFill(STATUS_CANCELLED);
                 statusLabel.setTextFill(STATUS_CANCELLED);
                 break;
-            case "ready for pickup":
+            case "ready for pick-up":
                 statusCircle.setFill(STATUS_READY_PICKUP);
                 statusLabel.setTextFill(STATUS_READY_PICKUP);
                 break;
@@ -439,7 +439,7 @@ public class ShowOrders {
         styleActionButton(verifyPaymentButton, PRIMARY_COLOR);
 
         // Ready for Pickup Button
-        final Button readyForPickupButton = new Button("Mark as Ready for Pickup");
+        final Button readyForPickupButton = new Button("Mark as Ready for Pick-up");
         styleActionButton(readyForPickupButton, ACCENT_COLOR);
         
         // Assign to Rider Button
@@ -474,8 +474,8 @@ public class ShowOrders {
             
             readyForPickupButton.setOnAction(e -> {
                 Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
-                confirmAlert.setTitle("Confirm Ready for Pickup");
-                confirmAlert.setHeaderText("Are you sure you want to mark this order as Ready for Pickup?");
+                confirmAlert.setTitle("Confirm Ready for Pick-up");
+                confirmAlert.setHeaderText("Are you sure you want to mark this order as Ready for Pick-up?");
                 confirmAlert.setContentText("This will notify the customer that their order is ready.");
 
                 Optional<ButtonType> result = confirmAlert.showAndWait();
@@ -487,7 +487,7 @@ public class ShowOrders {
                     }
 
                     readyForPickupButton.setDisable(true);
-                    statusLabel.setText("Ready for Pickup");
+                    statusLabel.setText("Ready for Pick-up");
                     statusLabel.setTextFill(STATUS_READY_PICKUP);
                     statusCircle.setFill(STATUS_READY_PICKUP);
                     orderBox.setStyle(orderBox.getStyle() + "-fx-background-color: #E3F2FD;"); // Light blue background
@@ -703,7 +703,7 @@ public class ShowOrders {
 
         int rowsAffected = preparedStatement.executeUpdate();
         if (rowsAffected > 0) {
-            System.out.println("Order marked as 'Ready for Pickup' successfully!");
+            System.out.println("Order marked as 'Ready for Pick-up' successfully!");
 
             // Fetch customer_id and email based on customer name
             String callProc = "{CALL GetCustomerDetailsByName(?)}";
