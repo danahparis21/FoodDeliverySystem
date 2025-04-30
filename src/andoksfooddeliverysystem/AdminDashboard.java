@@ -67,6 +67,7 @@ import javax.mail.MessagingException;
 
 public class AdminDashboard extends Application {
     private int userID;
+     private int adminID;
     private VBox sidebar;
     private BorderPane mainLayout;
     private boolean sidebarVisible = true;
@@ -83,7 +84,15 @@ public class AdminDashboard extends Application {
     
     public AdminDashboard(int userID) {
         this.userID = userID;
+        
         System.out.println("✅ AdminDashboard opened with User ID: " + userID); // Debugging
+    
+        this.adminID = AdminFetcher.getAdminIdFromUserId(userID); // Fetch rider_id
+        if (adminID == -1) {
+            System.out.println("❌ No admin found for User ID: " + userID);
+        } else {
+            System.out.println("✅ Admin ID: " + adminID + " fetched for User ID: " + userID);
+        }
     }
     
     @Override
@@ -181,7 +190,7 @@ public class AdminDashboard extends Application {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
         
-        Label userLabel = new Label("Admin ID: " + userID);
+        Label userLabel = new Label("Admin ID: " + adminID);
         userLabel.setStyle(
             "-fx-font-size: 14px;" +
             "-fx-text-fill: " + DARK_TEXT + ";"

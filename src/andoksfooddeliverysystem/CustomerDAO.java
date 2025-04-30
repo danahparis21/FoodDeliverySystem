@@ -14,7 +14,7 @@ import java.util.List;
 public class CustomerDAO {
     public static Customer getCustomerByUserId(int userId) {
         Customer customer = null;
-        String query = "SELECT * FROM customers WHERE user_id = ?";
+        String query = "{CALL GetCustomerDataByUserId(?)}"; // Use stored procedure
 
         try (Connection conn = Database.connect();
              PreparedStatement stmt = conn.prepareStatement(query)) {
