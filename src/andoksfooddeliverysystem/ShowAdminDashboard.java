@@ -672,7 +672,7 @@ private VBox createStoreStatusCard() {
     
     // Create modern time range selector with gradient
     ComboBox<String> timeRangeComboBox = new ComboBox<>();
-    timeRangeComboBox.getItems().addAll("Today", "Daily", "Weekly", "Monthly", "Yearly");
+    timeRangeComboBox.getItems().addAll("Today", "Daily", "Monthly", "Yearly");
     timeRangeComboBox.setValue("Today");
     timeRangeComboBox.setStyle(
         "-fx-background-color: linear-gradient(to bottom, #ffffff, #f5f7fa);" +

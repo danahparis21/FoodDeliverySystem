@@ -1247,7 +1247,7 @@ private static double getDeliveryFeeByBarangay(String barangayName) {
         ObservableList<Address> addresses = FXCollections.observableArrayList();
         try (Connection conn = Database.connect()) {
             // Modified SQL query to include contact_number
-            String sql = "SELECT address_id, street, barangay_id, address_type, is_default, contact_number FROM addresses WHERE customer_id = ?";
+            String sql = "SELECT address_id, street, barangay_id, address_type, is_default, contact_number FROM addresses WHERE customer_id = ? AND is_active = 1";
             PreparedStatement pstmt = conn.prepareStatement(sql);
             pstmt.setInt(1, customerId);
 
