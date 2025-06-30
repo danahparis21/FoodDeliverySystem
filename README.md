@@ -120,21 +120,31 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 <br>
 
 <p align="center">
-  <img src="images/startup-page.jpg" width="300"/>
-  <img src="images/login.jpg" width="300"/>
-  <img src="images/customer-menu.jpg" width="300"/>
+  <img src="images/startup-page.jpg" width="400" height="200"/>
+  <img src="images/login.jpg" width="400" height="200"/>
+  
 </p>
 <p align="center">
-   
-  <img src="images/checkout.jpg" width="300"/>
-  <img src="images/email_notifications.jpg" width="300"/>
-  <img src="images/admin-dashboard.jpg" width="300"/>
+  <img src="images/customer-menu.jpg" width="400" height="200"/>
+  <img src="images/checkout.jpg" width="400" height="200"/>
+  
 </p>
 <p align="center">
-   <img src="images/menu-management.jpg" width="300"/>
-  <img src="images/order-list-admin.jpg" width="300"/>
-  <img src="images/rider-dashboard.jpg" width="300"/>
+  <img src="images/email_notifications.jpg" width="400"  height="200"/>
+  <img src="images/admin-dashboard.jpg" width="400" height="200"/>
 </p>
+
+<p align="center">
+ <img src="images/menu-management.jpg" width="400" height="200"/>
+  <img src="images/order-list-admin.jpg" width="400" height="200"/>
+  
+</p>
+
+<p align="center">
+ <img src="images/rider-dashboard.jpg" width="400" height="200"/>
+  <img src="images/performance_report-pdf.jpg" width="400 height="200""/>
+</p>
+
 </details>
 
 
