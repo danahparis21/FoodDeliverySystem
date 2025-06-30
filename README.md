@@ -2,6 +2,21 @@
 
 A full-featured desktop food ordering and delivery system built using JavaFX, tailored for Andok’s, a local restaurant business. This system supports **admin, rider, and customer** roles with dashboards, real-time order tracking, email notifications, analytics, and more.
 
+## 📑 Table of Contents
+
+- [🧠 Overview](#-overview)
+- [🎯 Objectives](#-objectives)
+- [🛠️ Tech Stack](#-tech-stack)
+- [🗂️ System Features](#-system-features)
+- [🧾 Data & Functionality Highlights](#-data--functionality-highlights)
+- [📸 Screenshots](#-screenshots)
+- [📊 ERD & System Flow](#-erd--system-flow)
+- [🧪 How to Run](#-how-to-run)
+- [📄 Project Documentation](#project-documentation)
+- [📬 Contact & Credits](#-contact--credits)
+- [📄 License](#-license)
+
+
 ## 🧠 Overview
 
 The Andok’s Food Ordering System streamlines the process from customer ordering to rider delivery. It supports:
@@ -40,27 +55,39 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 
 ### 🔐 Role-Based Access
 
-- **Admin**
-  - Dashboard with store stats and controls
-  - Menu & rider management
-  - Assign delivery orders
-  - Approve/decline GCash payments
-  - Real-time audit logs
-  - Generate PDF reports
+<details>
+<summary>Admin</summary>
 
-- **Customer**
+- Dashboard with store stats and controls  
+- Menu & rider management  
+- Assign delivery orders  
+- Approve/decline GCash payments  
+- Real-time audit logs  
+- Generate PDF reports
+
+</details>
+
+<details>
+<summary>Customer</summary>
+  
   - Browse and customize menu
   - Role-based login/signup
   - Cart, checkout (delivery or pickup)
   - Upload proof for GCash
   - Track order status
   - Rate completed orders
+ 
+</details>
 
-- **Rider**
+<details>
+<summary>Rider</summary>
+  
   - View assigned orders
   - Upload proof of delivery
   - Track ratings and performance
   - Update delivery statuses
+ 
+</details>
 
 ### 📦 Delivery & Pickup Modes
 
@@ -113,11 +140,11 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 
 ## 📊 ERD & System Flow
 <details>
-<summary>Click to view ERD & flowchart 📷</summary>
+<summary>Click to view ERD & flowchart 📊</summary>
 
 <br>
 
-![ERD](images/erd.png)
+![ERD](images/ERD.png)
 ![System Flowchart](images/flowchart.png)
 </details>
 
@@ -127,6 +154,9 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 - Set up MySQL database using provided .sql file
 - Configure DB connection in DBConnection.java
 - Run Main.java
+
+## Project Documentation
+[📄 View the Full Documentation (PDF)](documents/documentation.pdf)
 
 ## 📬 Contact & Credits
 
