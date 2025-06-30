@@ -87,24 +87,39 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 ---
 
 ## 📸 Screenshots
+<details>
+<summary>Click to view screenshots 📷</summary>
 
-![StartUp Screen](images/startup-page.jpg)
-![Login Screen](images/login.jpg)
-![Customer Menu](images/customer-menu.jpg)
-![Check Out](images/checkout.jpg)
-![Email Notifications](images/email-notifications.jpg)
-![Admin Dashboard](images/admin-dashboard.jpg)
-![Menu Management](images/menu-management.jpg)
-![Admin Order List](images/order-list-admin.jpg)
-![Rider Dashboard](images/rider-dashboard.jpg)
-![Rider Assigned Orders](images/rider-assigned-orders.jpg)
-![Order Rating](images/order-rating.jpg)
-![Performance Report PDF](images/performance_report.jpg)
+<br>
+
+<p align="center">
+  <img src="images/startup-page.jpg" width="300"/>
+  <img src="images/login.jpg" width="300"/>
+  <img src="images/customer-menu.jpg" width="300"/>
+</p>
+<p align="center">
+   
+  <img src="images/checkout.jpg" width="300"/>
+  <img src="images/email_notifications.jpg" width="300"/>
+  <img src="images/admin-dashboard.jpg" width="300"/>
+</p>
+<p align="center">
+   <img src="images/menu-management.jpg" width="300"/>
+  <img src="images/order-list-admin.jpg" width="300"/>
+  <img src="images/rider-dashboard.jpg" width="300"/>
+</p>
+</details>
+
 
 ## 📊 ERD & System Flow
+<details>
+<summary>Click to view ERD & flowchart 📷</summary>
+
+<br>
 
 ![ERD](images/erd.png)
 ![System Flowchart](images/flowchart.png)
+</details>
 
 ## 🧪 How to Run
 - Clone this repository
