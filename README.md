@@ -87,7 +87,31 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 ---
 
 ## 📸 Screenshots
-```markdown
+
 ![StartUp Screen](images/startup-page.png)
 ![Login Screen](images/login.png)
 ![Customer Menu](images/customer-menu.png)
+
+## 📊 ERD & System Flow
+
+![ERD](images/erd.png)
+![System Flowchart](images/flowchart.png)
+
+## 🧪 How to Run
+- Clone this repository
+- Import into NetBeans or IntelliJ
+- Set up MySQL database using provided .sql file
+- Configure DB connection in DBConnection.java
+- Run Main.java
+
+## 📬 Contact & Credits
+
+Developed as a finals project by **Danah Paris**
+
+📧 Email: micadanah21@gmail.com
+
+📌 School: [BatStateU - ARASOF Nasugbu] | Course: [BSIT]
+
+## 📄 License
+This project was built for educational purposes.
+Feel free to explore and learn, but please credit when using this project.
