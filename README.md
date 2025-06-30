@@ -164,7 +164,7 @@ Developed as a finals project by **Danah Paris**
 
 📧 Email: micadanah21@gmail.com
 
-📌 School: [BatStateU - ARASOF Nasugbu] | Course: [BSIT]
+📌 School: **BatStateU - ARASOF Nasugbu** | Course: **BSIT**
 
 ## 📄 License
 This project was built for educational purposes.
