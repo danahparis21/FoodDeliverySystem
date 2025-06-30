@@ -88,9 +88,18 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 
 ## 📸 Screenshots
 
-![StartUp Screen](images/startup-page.png)
-![Login Screen](images/login.png)
-![Customer Menu](images/customer-menu.png)
+![StartUp Screen](images/startup-page.jpg)
+![Login Screen](images/login.jpg)
+![Customer Menu](images/customer-menu.jpg)
+![Check Out](images/checkout.jpg)
+![Email Notifications](images/email-notifications.jpg)
+![Admin Dashboard](images/admin-dashboard.jpg)
+![Menu Management](images/menu-management.jpg)
+![Admin Order List](images/order-list-admin.jpg)
+![Rider Dashboard](images/rider-dashboard.jpg)
+![Rider Assigned Orders](images/rider-assigned-orders.jpg)
+![Order Rating](images/order-rating.jpg)
+![Performance Report PDF](images/performance_report.jpg)
 
 ## 📊 ERD & System Flow
 
