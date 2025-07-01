@@ -56,7 +56,7 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 ### 🔐 Role-Based Access
 
 <details>
-<summary>Admin</summary>
+<summary><strong>Admin</strong></summary>
 
 - Dashboard with store stats and controls  
 - Menu & rider management  
@@ -68,7 +68,7 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 </details>
 
 <details>
-<summary>Customer</summary>
+<summary><strong>Customer</strong></summary>
   
   - Browse and customize menu
   - Role-based login/signup
@@ -80,7 +80,7 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 </details>
 
 <details>
-<summary>Rider</summary>
+<summary><strong>Rider</strong></summary>
   
   - View assigned orders
   - Upload proof of delivery
