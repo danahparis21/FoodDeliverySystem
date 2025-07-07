@@ -2,22 +2,22 @@
 
 A full-featured desktop food ordering and delivery system built using JavaFX, tailored for Andok’s, a local restaurant business. This system supports **admin, rider, and customer** roles with dashboards, real-time order tracking, email notifications, analytics, and more.
 
-## 📑 Table of Contents
+## Table of Contents
 
-- [🧠 Overview](#-overview)
-- [🎯 Objectives](#-objectives)
-- [🛠️ Tech Stack](#-tech-stack)
-- [🗂️ System Features](#-system-features)
-- [🧾 Data & Functionality Highlights](#-data--functionality-highlights)
-- [📸 Screenshots](#-screenshots)
-- [📊 ERD & System Flow](#-erd--system-flow)
-- [🧪 How to Run](#-how-to-run)
-- [📄 Project Documentation](#project-documentation)
-- [📬 Contact & Credits](#-contact--credits)
-- [📄 License](#-license)
+- [Overview](#-overview)
+- [Objectives](#-objectives)
+- [Tech Stack](#-tech-stack)
+- [System Features](#-system-features)
+- [Data & Functionality Highlights](#-data--functionality-highlights)
+- [Screenshots](#-screenshots)
+- [ERD & System Flow](#-erd--system-flow)
+- [How to Run](#-how-to-run)
+- [Project Documentation](#project-documentation)
+- [Contact & Credits](#-contact--credits)
+- [License](#-license)
 
 
-## 🧠 Overview
+##  Overview
 
 The Andok’s Food Ordering System streamlines the process from customer ordering to rider delivery. It supports:
 
@@ -30,7 +30,7 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 
 ---
 
-## 🎯 Objectives
+##  Objectives
 
 - Provide a user-friendly online food ordering experience
 - Enable admins to manage orders, menus, and rider accounts
@@ -40,7 +40,7 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 - **JavaFX** – UI/UX
 - **JavaMail (javax.mail)** – Email notifications
@@ -51,9 +51,9 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 
 ---
 
-## 🗂️ System Features
+##  System Features
 
-### 🔐 Role-Based Access
+### Role-Based Access
 
 <details>
 <summary><strong>Admin</strong></summary>
@@ -89,7 +89,7 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
  
 </details>
 
-### 📦 Delivery & Pickup Modes
+### Delivery & Pickup Modes
 
 - **Delivery**
   - Nasugbu-area only
@@ -102,7 +102,7 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 
 ---
 
-## 🧾 Data & Functionality Highlights
+## Data & Functionality Highlights
 
 - **Stored Procedures** – For frequent actions (get user info, send notif)
 - **Views** – For rider earnings, order summary, analytics
@@ -113,7 +113,7 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 <details>
 <summary>Click to view screenshots 📷</summary>
 
@@ -148,7 +148,7 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 </details>
 
 
-## 📊 ERD & System Flow
+## ERD & System Flow
 <details>
 <summary>Click to view ERD & flowchart 📊</summary>
 
@@ -158,17 +158,11 @@ The Andok’s Food Ordering System streamlines the process from customer orderin
 ![System Flowchart](images/flowchart.png)
 </details>
 
-## 🧪 How to Run
-- Clone this repository
-- Import into NetBeans or IntelliJ
-- Set up MySQL database using provided .sql file
-- Configure DB connection in DBConnection.java
-- Run Main.java
 
 ## Project Documentation
 [📄 View the Full Documentation (PDF)](documents/documentation.pdf)
 
-## 📬 Contact & Credits
+##  Contact & Credits
 
 Developed as a finals project by **Danah Paris**
 
